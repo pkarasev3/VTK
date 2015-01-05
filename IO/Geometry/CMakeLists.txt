@@ -15,9 +15,7 @@ SET(Module_SRCS
   vtkMoleculeReaderBase.cxx
   vtkMultiBlockPLOT3DReader.cxx
   vtkMultiBlockPLOT3DReaderInternals.cxx
-  vtkOBJReader.cxx
-  kOBJReader.cxx
-  kOBJReaderInternals.cxx
+  vtkOBJReader.cxx 
   vtkOpenFOAMReader.cxx
   vtkParticleReader.cxx
   vtkPDBReader.cxx
@@ -37,8 +35,7 @@ set_source_files_properties(
   )
 
 set_source_files_properties(
-  vtkMultiBlockPLOT3DReaderInternals
-  kOBJReaderInternals
+  vtkMultiBlockPLOT3DReaderInternals 
   WRAP_EXCLUDE
   )
 

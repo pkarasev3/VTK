@@ -1,9 +1,10 @@
-#include "mtl_parser.h"
+
 #include <iostream>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <map>
+#include "kOBJReader.h"
 
 using namespace std;
 #define OBJ_LINE_SIZE 500   // TODO: get rid of this
@@ -31,7 +32,7 @@ char contains(const char *haystack, const char *needle)
 
 using namespace Retarded;
 
-//string   getImageFilename( boost::shared_ptr ) {
+//string   getImageFilename( std::shared_ptr ) {
 //  if( 0 == mtlName_to_imgFile.count(key) ) {
 //    cout << "Warning, requested string key " << key << " was not found." << endl;
 //    return string("");
@@ -40,7 +41,7 @@ using namespace Retarded;
 //  }
 //}
 
-void obj_set_material_defaults(boost::shared_ptr<obj_material> mtl)
+void obj_set_material_defaults(std::shared_ptr<obj_material> mtl)
 {
   mtl->amb[0] = 0.2;
   mtl->amb[1] = 0.2;
@@ -62,13 +63,12 @@ void obj_set_material_defaults(boost::shared_ptr<obj_material> mtl)
        << std::string(mtl->texture_filename) << endl;
 }
 
-vector<boost::shared_ptr<obj_material> > obj_parse_mtl_file(const std::string& Filename,
-                                                                           int& result_code)
+vector<std::shared_ptr<obj_material> > obj_parse_mtl_file(std::string Filename,int& result_code)
 {
   // Maybe this should return a map instead, e.g. mapping string keys to ptrToMaterialStruct values
   // problem is that we don't know the material name at creation-time of this thing ... d'oh
 
-  vector<boost::shared_ptr<obj_material> >  listOfMaterials;
+  vector<std::shared_ptr<obj_material> >  listOfMaterials;
   result_code    = 0;
   const char* filename = Filename.c_str();
 
@@ -77,7 +77,7 @@ vector<boost::shared_ptr<obj_material> > obj_parse_mtl_file(const std::string& F
   char *current_token;
   char current_line[OBJ_LINE_SIZE];
   char material_open = 0;
-  boost::shared_ptr<obj_material> current_mtl; //= NULL;
+  std::shared_ptr<obj_material> current_mtl; //= NULL;
   FILE *mtl_file_stream;
 
   // open scene
@@ -105,7 +105,7 @@ vector<boost::shared_ptr<obj_material> > obj_parse_mtl_file(const std::string& F
     else if( strequal(current_token, "newmtl"))
     {
       material_open = 1;
-      current_mtl = boost::shared_ptr<obj_material> (new obj_material);
+      current_mtl = std::shared_ptr<obj_material> (new obj_material);
       listOfMaterials.push_back(current_mtl);
       obj_set_material_defaults(current_mtl);
 

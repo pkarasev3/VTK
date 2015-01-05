@@ -6,6 +6,7 @@ vtk_module(vtkIOImport
     vtkRenderingCore
   PRIVATE_DEPENDS
     vtkFiltersSources
+    vtkIOImage
   TEST_DEPENDS
     vtkRendering${VTK_RENDERING_BACKEND}
     vtkTestingRendering

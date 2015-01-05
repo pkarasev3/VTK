@@ -24,18 +24,22 @@
 #include "vtkPoints.h"
 #include "vtkProperty.h"
 #include "vtkSmartPointer.h"
+#include "vtkPolyDataMapper.h"
+#include "vtkRenderer.h"
+#include "vtkRenderWindow.h"
+#include "vtkActor.h"
+#include "vtkJPEGReader.h"
+#include "vtkPNGReader.h"
 #include <ctype.h>
 #include <cstdio>
 #include <list>
 #include <set>
 #include <map>
-#include <boost/shared_ptr.hpp>
-#include "mtl_parser.h"
-#include <boost/filesystem.hpp>
+#include <memory>
 
 vtkStandardNewMacro(kOBJReader)
 #define SP(X) vtkSmartPointer< X >
-using boost::shared_ptr;
+using std::shared_ptr;
 using std::vector;
 using std::string;
 using std::map;
@@ -57,7 +61,7 @@ struct kOBJReader::RawPolyData_mit_Material
     normals->SetNumberOfComponents(3);
 
     materialName  = "";
-    mtlProperties = boost::shared_ptr<obj_material>(new obj_material);
+    mtlProperties = std::shared_ptr<obj_material>(new obj_material);
     obj_set_material_defaults( mtlProperties );
   }
 
@@ -70,9 +74,9 @@ struct kOBJReader::RawPolyData_mit_Material
   SP(vtkCellArray) lineElems    ;
   SP(vtkCellArray) normal_polys ;
 
-  typedef std::map<std::string,boost::shared_ptr<RawPolyData_mit_Material> > NamedMaterials;
+  typedef std::map<std::string,std::shared_ptr<RawPolyData_mit_Material> > NamedMaterials;
   std::string materialName;
-  boost::shared_ptr<obj_material> mtlProperties;
+  std::shared_ptr<obj_material> mtlProperties;
 };
 
 // Description:
@@ -85,7 +89,7 @@ kOBJReader::kOBJReader()
   this->SetNumberOfInputPorts(0);
   /** Switch to using multi-poly-data paradigm ...
                       pivot based on named materials */
-  boost::shared_ptr<RawPolyData_mit_Material> default_poly(
+  std::shared_ptr<RawPolyData_mit_Material> default_poly(
                                                 new RawPolyData_mit_Material);
   poly_list.push_back(default_poly);
   this->SetNumberOfOutputPorts(poly_list.size());
@@ -96,9 +100,9 @@ kOBJReader::~kOBJReader()
 
 }
 
-boost::shared_ptr<obj_material>  kOBJReader::GetMaterial(int k)
+std::shared_ptr<obj_material>  kOBJReader::GetMaterial(int k)
 { // unsafe !
-  boost::shared_ptr<RawPolyData_mit_Material>  rpdmm = this->poly_list[k];
+  std::shared_ptr<RawPolyData_mit_Material>  rpdmm = this->poly_list[k];
   return rpdmm->mtlProperties;
 }
 
@@ -125,7 +129,7 @@ void  bindTexturedPolydataToRenderWindow( vtkRenderWindow* renderWindow,
     vtkPolyData* objPoly = reader->GetOutput(port_idx);
     cout << "grabbed objPoly " << objPoly << ", port index " << port_idx << endl;
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInput(objPoly);
+    mapper->SetInputData(objPoly);
 
     { /** debuggish */
       int numPolys  = objPoly->GetNumberOfPolys();
@@ -138,7 +142,7 @@ void  bindTexturedPolydataToRenderWindow( vtkRenderWindow* renderWindow,
 
     std::string textureFilename = reader->GetTextureFilename(port_idx);
 
-    std::string file_extension  = boost::filesystem::extension( textureFilename );
+    std::string file_extension;//  = boost::filesystem::extension( textureFilename );
     cout << "attempting load texture named " << textureFilename
          << "    whose extensions seems to be " << file_extension << endl;
 
@@ -167,7 +171,7 @@ void  bindTexturedPolydataToRenderWindow( vtkRenderWindow* renderWindow,
     actor->SetTexture(vtk_texture);
     SP(vtkProperty) properties = SP(vtkProperty)::New();
 
-    boost::shared_ptr<obj_material> raw_mtl_data = reader->GetMaterial(port_idx);
+    std::shared_ptr<obj_material> raw_mtl_data = reader->GetMaterial(port_idx);
     properties->SetDiffuseColor(raw_mtl_data->diff);
     properties->SetSpecularColor(raw_mtl_data->spec);
     properties->SetAmbientColor(raw_mtl_data->amb);
@@ -663,7 +667,7 @@ int kOBJReader::RequestData(
           }
           else
           { // new material encountered; bag and tag it, make a new named-poly-data-container
-            boost::shared_ptr<RawPolyData_mit_Material>     novaya(new RawPolyData_mit_Material);
+            std::shared_ptr<RawPolyData_mit_Material>     novaya(new RawPolyData_mit_Material);
             novaya->materialName = mtl_name;
             novaya->mtlProperties= mtlName_to_mtlData[mtl_name];
             novaya->points->DeepCopy(poly_list.back()->points);
@@ -684,7 +688,7 @@ int kOBJReader::RequestData(
         }
         else /** This material name already exists; switch back to it! */
         {
-          boost::shared_ptr<RawPolyData_mit_Material> known_mtl = known_materials[mtl_name];
+          std::shared_ptr<RawPolyData_mit_Material> known_mtl = known_materials[mtl_name];
           cout << "switching to append faces with pre-existing material named "
                << known_mtl->materialName << endl;
           polys           = known_mtl->polys; // Update pointers reading file further

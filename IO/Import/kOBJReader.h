@@ -24,20 +24,58 @@
 
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkSmartPointer.h"
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <vector>
 #include <map>
 #include <cstdio>
-#include <boost/filesystem.hpp>
 #include "vtkActor.h"
-#include "mtl_parser.h"
-#define SP(X) vtkSmartPointer< X >
 
+#include "vtkIOImportModule.h" // For export macro
+#include "vtkImporter.h"
 
-using std::string;
+class vtkPolyData;
+
+// class  vtk3DSImporter : public vtkImporter
+
+#include <string>
+#include <math.h>
+
+#define OBJ_FILENAME_LENGTH 500
+#define MATERIAL_NAME_SIZE 255
+
 using std::vector;
+using std::shared_ptr;
 
-class VTK_IO_EXPORT kOBJReader : public vtkPolyDataAlgorithm
+struct obj_material
+{
+  char name[MATERIAL_NAME_SIZE];
+  char texture_filename[OBJ_FILENAME_LENGTH];
+  double amb[3];
+  double diff[3];
+  double spec[3];
+  double reflect;
+  double refract;
+  double trans;
+  double shiny;
+  double glossy;
+  double refract_index;
+  double get_amb_coeff() {
+    return sqrt( amb[0]*amb[0]+amb[1]*amb[1]+amb[2]*amb[2] );
+  }
+  double get_diff_coeff() {
+    return sqrt( diff[0]*diff[0]+diff[1]*diff[1]+diff[2]*diff[2] );
+  }
+  double get_spec_coeff() {
+    return sqrt( spec[0]*spec[0]+spec[1]*spec[1]+spec[2]*spec[2] );
+  }
+};
+
+void obj_set_material_defaults(shared_ptr<obj_material> mtl);
+
+vector<shared_ptr<obj_material> > obj_parse_mtl_file(std::string filename,int& result_code);
+
+
+class VTKIOIMPORT_EXPORT kOBJReader : public vtkPolyDataAlgorithm
 {
 public:
   static kOBJReader *New();
@@ -67,7 +105,7 @@ public:
       return NULL;
   }
 
-  boost::shared_ptr<obj_material>  GetMaterial(int k);
+  std::shared_ptr<obj_material>  GetMaterial(int k);
 
   std::string GetTextureFilename( int idx ); // return string by index
 
@@ -75,15 +113,15 @@ protected:
   kOBJReader();
   ~kOBJReader();
   int RequestData(vtkInformation *,
-                  vtkInformationVector **, vtkInformationVector *);
+                  vtkInformationVector **, vtkInformationVector *) override;
   std::string FileName;     // filename (.obj) being read
   std::string MTLfilename;  // associated .mtl to *.obj, typically it is *.obj.mtl
   double VertexScale; // scale vertices by this during import
 
-  std::map<std::string,boost::shared_ptr<obj_material> >  mtlName_to_mtlData;
+  std::map<std::string,std::shared_ptr<obj_material> >  mtlName_to_mtlData;
 
   // our internal parsing/storage
-  std::vector<boost::shared_ptr<RawPolyData_mit_Material> > poly_list;
+  std::vector<std::shared_ptr<RawPolyData_mit_Material> > poly_list;
 
   // what gets returned to client code via GetOutput()
   std::vector<vtkSmartPointer<vtkPolyData> >  outVector_of_vtkPolyData;
@@ -100,13 +138,8 @@ private:
 
 
 
-#include <vtkJPEGReader.h>
-#include <vtkTexture.h>
-#include <vtkPNGReader.h>
-#include "vtkRenderWindow.h"
-#include "vtkRenderer.h"
-#include "vtkPolyDataMapper.h"
-#include "vtkActor.h"
+class vtkRenderWindow;
+class vtkRenderer;
 
 void  bindTexturedPolydataToRenderWindow( vtkRenderWindow* renderWindow,
                                           vtkRenderer* renderer,
