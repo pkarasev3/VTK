@@ -15,7 +15,6 @@ SET(Module_SRCS
   vtkMoleculeReaderBase.cxx
   vtkMultiBlockPLOT3DReader.cxx
   vtkMultiBlockPLOT3DReaderInternals.cxx
-  vtkOBJReader.cxx 
   vtkOpenFOAMReader.cxx
   vtkParticleReader.cxx
   vtkPDBReader.cxx

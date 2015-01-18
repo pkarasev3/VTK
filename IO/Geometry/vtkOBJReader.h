@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    vtkOBJReader.h
+  Module:    vtvtkOBJImporter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,24 +12,24 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkOBJReader - read Wavefront .obj files
+// .NAME vtvtkOBJImporter - read Wavefront .obj files
 // .SECTION Description
-// vtkOBJReader is a source object that reads Wavefront .obj
+// vtvtkOBJImporter is a source object that reads Wavefront .obj
 // files. The output of this source object is polygonal data.
 // .SECTION See Also
 // vtkOBJImporter
 
-#ifndef __vtkOBJReader_h
-#define __vtkOBJReader_h
+#ifndef __vtvtkOBJImporter_h
+#define __vtvtkOBJImporter_h
 
 #include "vtkIOGeometryModule.h" // For export macro
 #include "vtkPolyDataAlgorithm.h"
 
-class VTKIOGEOMETRY_EXPORT vtkOBJReader : public vtkPolyDataAlgorithm
+class VTKIOGEOMETRY_EXPORT vtvtkOBJImporter : public vtkPolyDataAlgorithm
 {
 public:
-  static vtkOBJReader *New();
-  vtkTypeMacro(vtkOBJReader,vtkPolyDataAlgorithm);
+  static vtvtkOBJImporter *New();
+  vtkTypeMacro(vtvtkOBJImporter,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -38,15 +38,15 @@ public:
   vtkGetStringMacro(FileName);
 
 protected:
-  vtkOBJReader();
-  ~vtkOBJReader();
+  vtvtkOBJImporter();
+  ~vtvtkOBJImporter();
 
   int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
 
   char *FileName;
 private:
-  vtkOBJReader(const vtkOBJReader&);  // Not implemented.
-  void operator=(const vtkOBJReader&);  // Not implemented.
+  vtvtkOBJImporter(const vtvtkOBJImporter&);  // Not implemented.
+  void operator=(const vtvtkOBJImporter&);  // Not implemented.
 };
 
 #endif

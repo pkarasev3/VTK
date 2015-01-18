@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    vtkOBJReader.cxx
+  Module:    vtvtkOBJImporter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,7 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-#include "vtkOBJReader.h"
+#include "vtvtkOBJImporter.h"
 
 #include "vtkCellArray.h"
 #include "vtkFloatArray.h"
@@ -23,18 +23,18 @@
 #include "vtkPolyData.h"
 #include <ctype.h>
 
-vtkStandardNewMacro(vtkOBJReader);
+vtkStandardNewMacro(vtvtkOBJImporter);
 
 // Description:
 // Instantiate object with NULL filename.
-vtkOBJReader::vtkOBJReader()
+vtvtkOBJImporter::vtvtkOBJImporter()
 {
   this->FileName = NULL;
 
   this->SetNumberOfInputPorts(0);
 }
 
-vtkOBJReader::~vtkOBJReader()
+vtvtkOBJImporter::~vtvtkOBJImporter()
 {
   delete [] this->FileName;
   this->FileName = NULL;
@@ -98,7 +98,7 @@ p <v_a> <v_b> ...
 \*---------------------------------------------------------------------------*/
 
 
-int vtkOBJReader::RequestData(
+int vtvtkOBJImporter::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **vtkNotUsed(inputVector),
   vtkInformationVector *outputVector)
@@ -660,7 +660,7 @@ int vtkOBJReader::RequestData(
 }
 
 
-void vtkOBJReader::PrintSelf(ostream& os, vtkIndent indent)
+void vtvtkOBJImporter::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 

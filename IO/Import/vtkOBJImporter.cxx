@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    kOBJReader.cxx
+  Module:    vtkOBJImporter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,7 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-#include "kOBJReader.h"
+#include "vtkOBJImporter.h"
 
 #include "vtkCellArray.h"
 #include "vtkFloatArray.h"
@@ -37,17 +37,17 @@
 #include <map>
 #include <memory>
 
-vtkStandardNewMacro(kOBJReader)
+vtkStandardNewMacro(vtkOBJImporter)
 #define SP(X) vtkSmartPointer< X >
 using std::shared_ptr;
 using std::vector;
 using std::string;
 using std::map;
 
-struct kOBJReader::RawPolyData_mit_Material
+struct vtkOBJImporter::ImportedPolydataWithMaterial
 {
-  ~RawPolyData_mit_Material() { }
-  RawPolyData_mit_Material()
+  ~ImportedPolydataWithMaterial() { }
+  ImportedPolydataWithMaterial()
   { // intialise some structures to store the file contents in
     points            = SP(vtkPoints)::New();
     tcoords           = SP(vtkFloatArray)::New();
@@ -74,14 +74,14 @@ struct kOBJReader::RawPolyData_mit_Material
   SP(vtkCellArray) lineElems    ;
   SP(vtkCellArray) normal_polys ;
 
-  typedef std::map<std::string,std::shared_ptr<RawPolyData_mit_Material> > NamedMaterials;
+  typedef std::map<std::string,std::shared_ptr<ImportedPolydataWithMaterial> > NamedMaterials;
   std::string materialName;
   std::shared_ptr<obj_material> mtlProperties;
 };
 
 // Description:
 // Instantiate object with NULL filename, and no materials yet loaded.
-kOBJReader::kOBJReader()
+vtkOBJImporter::vtkOBJImporter()
 {
   this->FileName    = "";
   this->MTLfilename = "";
@@ -89,25 +89,25 @@ kOBJReader::kOBJReader()
   this->SetNumberOfInputPorts(0);
   /** Switch to using multi-poly-data paradigm ...
                       pivot based on named materials */
-  std::shared_ptr<RawPolyData_mit_Material> default_poly(
-                                                new RawPolyData_mit_Material);
+  std::shared_ptr<ImportedPolydataWithMaterial> default_poly(
+                                                new ImportedPolydataWithMaterial);
   poly_list.push_back(default_poly);
   this->SetNumberOfOutputPorts(poly_list.size());
 }
 
-kOBJReader::~kOBJReader()
+vtkOBJImporter::~vtkOBJImporter()
 {
 
 }
 
-std::shared_ptr<obj_material>  kOBJReader::GetMaterial(int k)
+std::shared_ptr<obj_material>  vtkOBJImporter::GetMaterial(int k)
 { // unsafe !
-  std::shared_ptr<RawPolyData_mit_Material>  rpdmm = this->poly_list[k];
+  std::shared_ptr<ImportedPolydataWithMaterial>  rpdmm = this->poly_list[k];
   return rpdmm->mtlProperties;
 }
 
 
-std::string kOBJReader::GetTextureFilename( int idx )
+std::string vtkOBJImporter::GetTextureFilename( int idx )
 {  // unsafe!
   return outVector_of_textureFilnames[idx];
 }
@@ -115,11 +115,11 @@ std::string kOBJReader::GetTextureFilename( int idx )
 
 void  bindTexturedPolydataToRenderWindow( vtkRenderWindow* renderWindow,
                                           vtkRenderer* renderer,
-                                          kOBJReader* reader )
+                                          vtkOBJImporter* reader )
 { // TODO: move this function to library, call from simulator client!
   if( NULL == (renderWindow) ) { cout << "renderWindow is null, you fail" << endl; return; }
   if( NULL == (renderer) ) { cout << "renderer is null, you fail" << endl; return; }
-  if( NULL == (reader) ) { cout << "kOBJReader is null, you fail" << endl; return; }
+  if( NULL == (reader) ) { cout << "vtkOBJImporter is null, you fail" << endl; return; }
 
   reader->actor_list.clear();
   reader->actor_list.reserve( reader->GetNumberOfOutputPorts() );
@@ -265,7 +265,7 @@ p <v_a> <v_b> ...
 \*---------------------------------------------------------------------------*/
 
 
-int kOBJReader::RequestData(
+int vtkOBJImporter::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **vtkNotUsed(inputVector),
   vtkInformationVector *outputVector)
@@ -286,12 +286,12 @@ int kOBJReader::RequestData(
 
   vtkDebugMacro(<<"Reading file");
 
-  RawPolyData_mit_Material::NamedMaterials known_materials; // string to ptr map
+  ImportedPolydataWithMaterial::NamedMaterials known_materials; // string to ptr map
 
   int mtlParseResult;
   vector<shared_ptr<obj_material> >  parsedMTLs = obj_parse_mtl_file(MTLfilename,mtlParseResult);
   int numMaterialsInMTLfile = parsedMTLs.size();
-  cout << "kOBJReader parsed " << numMaterialsInMTLfile
+  cout << "vtkOBJImporter parsed " << numMaterialsInMTLfile
        << " materials from "   << MTLfilename << endl;
 
   vtkPoints* points  = poly_list.back()->points;
@@ -667,7 +667,7 @@ int kOBJReader::RequestData(
           }
           else
           { // new material encountered; bag and tag it, make a new named-poly-data-container
-            std::shared_ptr<RawPolyData_mit_Material>     novaya(new RawPolyData_mit_Material);
+            std::shared_ptr<ImportedPolydataWithMaterial>     novaya(new ImportedPolydataWithMaterial);
             novaya->materialName = mtl_name;
             novaya->mtlProperties= mtlName_to_mtlData[mtl_name];
             novaya->points->DeepCopy(poly_list.back()->points);
@@ -688,7 +688,7 @@ int kOBJReader::RequestData(
         }
         else /** This material name already exists; switch back to it! */
         {
-          std::shared_ptr<RawPolyData_mit_Material> known_mtl = known_materials[mtl_name];
+          std::shared_ptr<ImportedPolydataWithMaterial> known_mtl = known_materials[mtl_name];
           cout << "switching to append faces with pre-existing material named "
                << known_mtl->materialName << endl;
           polys           = known_mtl->polys; // Update pointers reading file further
@@ -715,7 +715,7 @@ int kOBJReader::RequestData(
   { /** based on how many named materials are present,
                  set the number of output ports of vtkPolyData */
     this->SetNumberOfOutputPorts( known_materials.size() );
-    cout << "kOBJReader.cxx, set # of output ports to " << known_materials.size() << endl;
+    cout << "vtkOBJImporter.cxx, set # of output ports to " << known_materials.size() << endl;
     this->outVector_of_vtkPolyData.clear();
     for( int i=0;i<(int)known_materials.size();i++){
       SP(vtkPolyData) poly_data = SP(vtkPolyData)::New();
@@ -867,7 +867,7 @@ int kOBJReader::RequestData(
 }
 
 
-void kOBJReader::PrintSelf(ostream& os, vtkIndent indent)
+void vtkOBJImporter::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 

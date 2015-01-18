@@ -1,33 +1,15 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    kOBJReader.h
-
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notice for more information.
-
 =========================================================================*/
-// .NAME kOBJReader - read Wavefront .obj files
+// .NAME vtkOBJImporter - read Wavefront .obj files
 // .SECTION Description
-// kOBJReader is a source object that reads Wavefront .obj
-// files. The output of this source object is polygonal data.
-// .SECTION See Also
-// vtkOBJImporter (wtf doesn't exist...)
 
-#ifndef __kOBJReader_h
-#define __kOBJReader_h
+
+#ifndef __vtkOBJImporter_h
+#define __vtkOBJImporter_h
 
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkSmartPointer.h"
-#include <memory>
-#include <vector>
-#include <map>
-#include <cstdio>
 #include "vtkActor.h"
 
 #include "vtkIOImportModule.h" // For export macro
@@ -35,8 +17,10 @@
 
 class vtkPolyData;
 
-// class  vtk3DSImporter : public vtkImporter
-
+#include <memory>
+#include <vector>
+#include <map>
+#include <cstdio>
 #include <string>
 #include <math.h>
 
@@ -75,11 +59,11 @@ void obj_set_material_defaults(shared_ptr<obj_material> mtl);
 vector<shared_ptr<obj_material> > obj_parse_mtl_file(std::string filename,int& result_code);
 
 
-class VTKIOIMPORT_EXPORT kOBJReader : public vtkPolyDataAlgorithm
+class VTKIOIMPORT_EXPORT vtkOBJImporter : public vtkPolyDataAlgorithm
 {
 public:
-  static kOBJReader *New();
-  vtkTypeMacro(kOBJReader,vtkPolyDataAlgorithm);
+  static vtkOBJImporter *New();
+  vtkTypeMacro(vtkOBJImporter,vtkPolyDataAlgorithm);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -96,7 +80,7 @@ public:
   vtkSetMacro(VertexScale,double);
   vtkGetMacro(VertexScale,double);
 
-  struct RawPolyData_mit_Material;
+  struct ImportedPolydataWithMaterial;
 
   virtual vtkPolyData* GetOutput(int idx) {
     if( idx < (int)outVector_of_vtkPolyData.size() )
@@ -110,8 +94,8 @@ public:
   std::string GetTextureFilename( int idx ); // return string by index
 
 protected:
-  kOBJReader();
-  ~kOBJReader();
+  vtkOBJImporter();
+  ~vtkOBJImporter();
   int RequestData(vtkInformation *,
                   vtkInformationVector **, vtkInformationVector *) override;
   std::string FileName;     // filename (.obj) being read
@@ -121,7 +105,7 @@ protected:
   std::map<std::string,std::shared_ptr<obj_material> >  mtlName_to_mtlData;
 
   // our internal parsing/storage
-  std::vector<std::shared_ptr<RawPolyData_mit_Material> > poly_list;
+  std::vector<std::shared_ptr<ImportedPolydataWithMaterial> > poly_list;
 
   // what gets returned to client code via GetOutput()
   std::vector<vtkSmartPointer<vtkPolyData> >  outVector_of_vtkPolyData;
@@ -132,8 +116,8 @@ public:
   std::vector<vtkSmartPointer<vtkActor> >  actor_list;
 
 private:
-  kOBJReader(const kOBJReader&);  // Not implemented.
-  void operator=(const kOBJReader&);  // Not implemented.
+  vtkOBJImporter(const vtkOBJImporter&);  // Not implemented.
+  void operator=(const vtkOBJImporter&);  // Not implemented.
 };
 
 
@@ -143,7 +127,7 @@ class vtkRenderer;
 
 void  bindTexturedPolydataToRenderWindow( vtkRenderWindow* renderWindow,
                                           vtkRenderer* renderer,
-                                          kOBJReader* reader );
+                                          vtkOBJImporter* reader );
 
 
 #endif

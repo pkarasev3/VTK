@@ -2,8 +2,8 @@ set(Module_SRCS
   vtk3DSImporter.cxx
   vtkImporter.cxx
   vtkVRMLImporter.cxx
-  kOBJReader.cxx
-  kOBJReaderInternals.cxx
+  vtkOBJImporter.cxx
+  vtkOBJImporterInternals.cxx
 )
 
 set_source_files_properties(
@@ -12,7 +12,7 @@ set_source_files_properties(
   )
 
 set_source_files_properties(
-  kOBJReaderInternals 
+  vtkOBJImporterInternals 
   WRAP_EXCLUDE
   )
 

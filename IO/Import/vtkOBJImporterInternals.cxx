@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <map>
-#include "kOBJReader.h"
+#include "vtkOBJImporter.h"
 
 using namespace std;
 #define OBJ_LINE_SIZE 500   // TODO: get rid of this
