@@ -17,6 +17,7 @@ SET(Module_SRCS
   vtkMultiBlockPLOT3DReaderInternals.cxx
   vtkOpenFOAMReader.cxx
   vtkParticleReader.cxx
+  vtkOBJReader.cxx
   vtkPDBReader.cxx
   vtkPlot3DMetaReader.cxx
   vtkProStarReader.cxx

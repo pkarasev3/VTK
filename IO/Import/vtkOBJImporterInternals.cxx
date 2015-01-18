@@ -5,12 +5,14 @@
 #include <string.h>
 #include <map>
 #include "vtkOBJImporter.h"
+#include "vtkOBJImporterInternals.h"
 
-using namespace std;
+
 #define OBJ_LINE_SIZE 500   // TODO: get rid of this
 
 
-namespace Retarded {
+namespace
+{
 
 char strequal(const char *s1, const char *s2)
 {
@@ -26,11 +28,7 @@ char contains(const char *haystack, const char *needle)
   return 1;
 }
 
-//static map<string,string>   mtlName_to_imgFile;
-
 }
-
-using namespace Retarded;
 
 //string   getImageFilename( std::shared_ptr ) {
 //  if( 0 == mtlName_to_imgFile.count(key) ) {
@@ -41,7 +39,7 @@ using namespace Retarded;
 //  }
 //}
 
-void obj_set_material_defaults(std::shared_ptr<obj_material> mtl)
+void obj_set_material_defaults(obj_material* mtl)
 {
   mtl->amb[0] = 0.2;
   mtl->amb[1] = 0.2;
@@ -63,12 +61,12 @@ void obj_set_material_defaults(std::shared_ptr<obj_material> mtl)
        << std::string(mtl->texture_filename) << endl;
 }
 
-vector<std::shared_ptr<obj_material> > obj_parse_mtl_file(std::string Filename,int& result_code)
+std::vector<obj_material*> obj_parse_mtl_file(std::string Filename,int& result_code)
 {
   // Maybe this should return a map instead, e.g. mapping string keys to ptrToMaterialStruct values
   // problem is that we don't know the material name at creation-time of this thing ... d'oh
 
-  vector<std::shared_ptr<obj_material> >  listOfMaterials;
+  std::vector<obj_material*>  listOfMaterials;
   result_code    = 0;
   const char* filename = Filename.c_str();
 
@@ -77,7 +75,7 @@ vector<std::shared_ptr<obj_material> > obj_parse_mtl_file(std::string Filename,i
   char *current_token;
   char current_line[OBJ_LINE_SIZE];
   char material_open = 0;
-  std::shared_ptr<obj_material> current_mtl; //= NULL;
+  obj_material* current_mtl = NULL;
   FILE *mtl_file_stream;
 
   // open scene
@@ -105,7 +103,7 @@ vector<std::shared_ptr<obj_material> > obj_parse_mtl_file(std::string Filename,i
     else if( strequal(current_token, "newmtl"))
     {
       material_open = 1;
-      current_mtl = std::shared_ptr<obj_material> (new obj_material);
+      current_mtl = (new obj_material);
       listOfMaterials.push_back(current_mtl);
       obj_set_material_defaults(current_mtl);
 

@@ -25,11 +25,11 @@
 #include "vtkIOGeometryModule.h" // For export macro
 #include "vtkPolyDataAlgorithm.h"
 
-class VTKIOGEOMETRY_EXPORT vtvtkOBJImporter : public vtkPolyDataAlgorithm
+class VTKIOGEOMETRY_EXPORT vtkOBJReader : public vtkPolyDataAlgorithm
 {
 public:
-  static vtvtkOBJImporter *New();
-  vtkTypeMacro(vtvtkOBJImporter,vtkPolyDataAlgorithm);
+  static vtkOBJReader *New();
+  vtkTypeMacro(vtkOBJReader,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -38,15 +38,15 @@ public:
   vtkGetStringMacro(FileName);
 
 protected:
-  vtvtkOBJImporter();
-  ~vtvtkOBJImporter();
+  vtkOBJReader();
+  ~vtkOBJReader();
 
   int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
 
   char *FileName;
 private:
-  vtvtkOBJImporter(const vtvtkOBJImporter&);  // Not implemented.
-  void operator=(const vtvtkOBJImporter&);  // Not implemented.
+  vtkOBJReader(const vtkOBJReader&);  // Not implemented.
+  void operator=(const vtkOBJReader&);  // Not implemented.
 };
 
 #endif
