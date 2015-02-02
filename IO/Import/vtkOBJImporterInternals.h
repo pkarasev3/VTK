@@ -1,4 +1,4 @@
-#include <string> 
+#include <string>
 #include "vtkOBJImporter.h"
 #include "vtkPolyDataAlgorithm.h"
 #include <memory>
@@ -89,7 +89,7 @@ protected:
   vtkOBJPolydataProcessor();
   ~vtkOBJPolydataProcessor();
   int RequestData(vtkInformation *,
-                  vtkInformationVector **, vtkInformationVector *) override;
+                  vtkInformationVector **, vtkInformationVector *) /*override*/;
 
   std::string FileName;     // filename (.obj) being read
   std::string MTLfilename;  // associated .mtl to *.obj, typically it is *.obj.mtl
@@ -98,3 +98,9 @@ private:
   vtkOBJPolydataProcessor(const vtkOBJPolydataProcessor&);  // Not implemented.
   void operator=(const vtkOBJPolydataProcessor&);  // Not implemented.
 };
+
+class vtkRenderWindow;
+class vtkRenderer;
+void  bindTexturedPolydataToRenderWindow( vtkRenderWindow* renderWindow,
+                                          vtkRenderer* renderer,
+                                          vtkOBJPolydataProcessor* reader );

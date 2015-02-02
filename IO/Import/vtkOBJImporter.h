@@ -36,7 +36,7 @@ protected:
   vtkOBJImporter();
   ~vtkOBJImporter();
 
-  virtual int ImportBegin ();
+  virtual int  ImportBegin ();
   virtual void ImportEnd ();
   virtual void ImportActors (vtkRenderer *renderer);
   virtual void ImportProperties (vtkRenderer *renderer);

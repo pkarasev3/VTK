@@ -28,8 +28,7 @@
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkActor.h"
-#include "vtkJPEGReader.h"
-#include "vtkPNGReader.h"
+
 #include <ctype.h>
 #include <cstdio>
 #include <list>
@@ -49,7 +48,7 @@ using std::map;
 
 vtkOBJImporter::vtkOBJImporter()
 {
-
+    this->Impl = vtkSmartPointer<vtkOBJPolydataProcessor>::New();
 }
 
 vtkOBJImporter::~vtkOBJImporter()
@@ -57,14 +56,35 @@ vtkOBJImporter::~vtkOBJImporter()
 
 }
 
+
+
+int canReadFile( vtkObject* that, const std::string& fname )
+{
+    FILE* fileFD = fopen (fname.c_str(), "rb");
+    if (fileFD == NULL)
+    {
+        vtkErrorWithObjectMacro(that,<< "Unable to open file: "<< fname.c_str());
+        return 0;
+    }
+    fclose(fileFD);
+    return 1;
+}
+
 int vtkOBJImporter::ImportBegin()
 {
+    if(canReadFile(this,FileName) && canReadFile(this,FileNameMTL))
+    {
+        this->Impl->SetFileName(FileName);
+        this->Impl->SetMTLfileName(FileNameMTL);
+        this->ImportActors(this->Renderer);
+    }
+
     return 1;
 }
 
 void vtkOBJImporter::ImportEnd()
 {
-
+    std::cout << " done with "<<__FUNCTION__<<std::endl;
 }
 
 void vtkOBJImporter::PrintSelf(std::ostream &os, vtkIndent indent)
@@ -75,12 +95,13 @@ void vtkOBJImporter::PrintSelf(std::ostream &os, vtkIndent indent)
 
 void vtkOBJImporter::ImportActors(vtkRenderer* renderer)
 {
-
+    this->Impl->Update();
+    bindTexturedPolydataToRenderWindow(this->RenderWindow,renderer,Impl.Get());
 }
 
 void vtkOBJImporter::ImportProperties(vtkRenderer* renderer)
 {
-
+    //    ImportActors(renderer);
 }
 
 
@@ -155,94 +176,6 @@ std::string vtkOBJPolydataProcessor::GetTextureFilename( int idx )
 }
 
 
-void  bindTexturedPolydataToRenderWindow( vtkRenderWindow* renderWindow,
-                                          vtkRenderer* renderer,
-                                          vtkOBJPolydataProcessor* reader )
-{ // TODO: move this function to library, call from simulator client!
-    if( NULL == (renderWindow) ) { cout << "renderWindow is null, you fail" << endl; return; }
-    if( NULL == (renderer) ) { cout << "renderer is null, you fail" << endl; return; }
-    if( NULL == (reader) ) { cout << "vtkOBJPolydataProcessor is null, you fail" << endl; return; }
-
-    reader->actor_list.clear();
-    reader->actor_list.reserve( reader->GetNumberOfOutputPorts() );
-
-    for( int port_idx=0; port_idx < reader->GetNumberOfOutputPorts(); port_idx++)
-    {
-        vtkPolyData* objPoly = reader->GetOutput(port_idx);
-        cout << "grabbed objPoly " << objPoly << ", port index " << port_idx << endl;
-        vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-        mapper->SetInputData(objPoly);
-
-        { /** debuggish */
-            int numPolys  = objPoly->GetNumberOfPolys();
-            int numPoints = objPoly->GetNumberOfPoints();
-            printf("numPolys = %08d, numPoints = %08d ...\n",numPolys,numPoints);
-        }
-
-        // For each named material, load and bind the texture, add it to the renderer
-        SP(vtkTexture) vtk_texture = SP(vtkTexture)::New();
-
-        std::string textureFilename = reader->GetTextureFilename(port_idx);
-
-        std::string file_extension;//  = boost::filesystem::extension( textureFilename );
-        cout << "attempting load texture named " << textureFilename
-             << "    whose extensions seems to be " << file_extension << endl;
-
-        SP(vtkJPEGReader) tex_jpg_Loader = SP(vtkJPEGReader)::New();
-        SP(vtkPNGReader)  tex_png_Loader = SP(vtkPNGReader)::New();
-        bool bIsReadableJPEG = tex_jpg_Loader->CanReadFile( textureFilename.c_str() );
-        bool bIsReadablePNG  = tex_png_Loader->CanReadFile( textureFilename.c_str() );
-
-        // TODO: crap, what if there is no texture image? seems required now
-        if( bIsReadableJPEG ) {
-            tex_jpg_Loader->SetFileName( textureFilename.c_str() );
-            tex_jpg_Loader->Update();
-            vtk_texture->AddInputConnection( tex_jpg_Loader->GetOutputPort() );
-        } else if( bIsReadablePNG ) {
-            tex_png_Loader->SetFileName( textureFilename.c_str() );
-            tex_png_Loader->Update();
-            vtk_texture->AddInputConnection( tex_png_Loader->GetOutputPort() );
-        } else {
-            cout << "Bad, unhandled or nonexistant texture image type! "
-                 << "Offender:   " << textureFilename << endl; exit(1);
-        }
-        // vtk_texture->InterpolateOn();     // Better?? (cant see obvious benefit)
-        vtk_texture->InterpolateOff(); // Faster?? (yes clearly faster for largish texture)
-        vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
-        actor->SetMapper(mapper);
-        actor->SetTexture(vtk_texture);
-        SP(vtkProperty) properties = SP(vtkProperty)::New();
-
-        obj_material* raw_mtl_data = reader->GetMaterial(port_idx);
-        properties->SetDiffuseColor(raw_mtl_data->diff);
-        properties->SetSpecularColor(raw_mtl_data->spec);
-        properties->SetAmbientColor(raw_mtl_data->amb);
-        properties->SetOpacity(raw_mtl_data->trans);
-        properties->SetInterpolationToPhong();
-        properties->SetLighting(true);
-        properties->SetSpecular( raw_mtl_data->get_spec_coeff() );
-        properties->SetAmbient( raw_mtl_data->get_amb_coeff() );
-        properties->SetDiffuse( raw_mtl_data->get_diff_coeff() );
-        cout << ".. done set up material definition, properties->Print says: " << endl;
-        properties->Print(std::cout);
-        actor->SetProperty(properties);
-        renderer->AddActor(actor);
-        //properties->ShadingOn(); // use ShadingOn() if loading vtkMaterial from xml
-        // available in mtl parser are:
-        //    double amb[3];
-        //    double diff[3];
-        //    double spec[3];
-        //    double reflect;
-        //    double refract;
-        //    double trans;
-        //    double shiny;
-        //    double glossy;
-        //    double refract_index;
-
-        reader->actor_list.push_back(actor); // keep a handle on actors to animate later
-    }
-    /** post-condition of this function: the renderer has had a bunch of actors added to it */
-}
 
 
 
