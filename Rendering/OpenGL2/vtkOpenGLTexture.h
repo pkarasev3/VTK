@@ -17,8 +17,8 @@
 // vtkOpenGLTexture is a concrete implementation of the abstract class
 // vtkTexture. vtkOpenGLTexture interfaces to the OpenGL rendering library.
 
-#ifndef __vtkOpenGLTexture_h
-#define __vtkOpenGLTexture_h
+#ifndef vtkOpenGLTexture_h
+#define vtkOpenGLTexture_h
 
 #include "vtkRenderingOpenGL2Module.h" // For export macro
 #include "vtkTexture.h"
@@ -78,7 +78,7 @@ public:
 
   // Description:
   // Return the texture unit used for this texture
-  int GetTextureUnit();
+  virtual int GetTextureUnit();
 
   // Description:
   // Is this Texture Translucent?

@@ -15,9 +15,10 @@
 
 #include "vtkglVBOHelper.h"
 
-#include "vtkActor.h"
-#include "vtkCamera.h"
 #include "vtkMath.h"
+#include "vtkMatrix4x4.h"
+#include "vtkOpenGLActor.h"
+#include "vtkOpenGLCamera.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
@@ -27,7 +28,7 @@
 
 #include "vtkSphereMapperVS.h"
 
-using vtkgl::replace;
+using vtkgl::substitute;
 
 //-----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkOpenGLSphereMapper)
@@ -41,11 +42,12 @@ vtkOpenGLSphereMapper::vtkOpenGLSphereMapper()
 
 //-----------------------------------------------------------------------------
 void vtkOpenGLSphereMapper::GetShaderTemplate(std::string &VSSource,
-                                          std::string &FSSource,
-                                          std::string &GSSource,
-                                          int lightComplexity, vtkRenderer* ren, vtkActor *actor)
+  std::string &FSSource,
+  std::string &GSSource,
+  int lightComplexity, vtkRenderer* ren, vtkActor *actor)
 {
-  this->Superclass::GetShaderTemplate(VSSource,FSSource,GSSource,lightComplexity,ren,actor);
+  this->Superclass::GetShaderTemplate(VSSource,FSSource,GSSource,
+                                      lightComplexity,ren,actor);
 
   VSSource = vtkSphereMapperVS;
 }
@@ -57,7 +59,12 @@ void vtkOpenGLSphereMapper::ReplaceShaderValues(std::string &VSSource,
                                                  vtkRenderer* ren,
                                                  vtkActor *actor)
 {
-  FSSource = replace(FSSource,
+  substitute(VSSource,
+    "//VTK::Camera::Dec",
+    "uniform mat4 VCDCMatrix;\n"
+    "uniform mat4 MCVCMatrix;");
+
+  substitute(FSSource,
     "//VTK::PositionVC::Dec",
     "varying vec4 vertexVCClose;");
 
@@ -67,25 +74,28 @@ void vtkOpenGLSphereMapper::ReplaceShaderValues(std::string &VSSource,
     "uniform float invertedDepth;\n"
     "uniform int cameraParallel;\n"
     "varying float radiusVC;\n"
-    "varying vec3 centerVC;\n";
+    "varying vec3 centerVC;\n"
+    "uniform mat4 VCDCMatrix;\n";
+  substitute(FSSource,"//VTK::Normal::Dec",replacement);
 
-  if (lightComplexity < 2)
-    {
-    replacement += "uniform mat4 VCDCMatrix;\n";
-    }
-  FSSource = replace(FSSource,"//VTK::Normal::Dec",replacement);
-
-  FSSource = replace(FSSource,"//VTK::Normal::Impl",
+  substitute(FSSource,"//VTK::Normal::Impl",
     // compute the eye position and unit direction
     "vec4 vertexVC = vertexVCClose;\n"
-    "  vec3 EyePos = vec3(0.0,0.0,0.0);\n"
-    "  if (cameraParallel != 0) { EyePos = vertexVC.xyz;}\n"
-    "  vec3 EyeDir = vertexVC.xyz - EyePos;\n"
+    "  vec3 EyePos;\n"
+    "  vec3 EyeDir;\n"
+    "  if (cameraParallel != 0) {\n"
+    "    EyePos = vec3(vertexVC.x, vertexVC.y, vertexVC.z + 3.0*radiusVC);\n"
+    "    EyeDir = vec3(0.0,0.0,-1.0); }\n"
+    "  else {\n"
+    "    EyeDir = vertexVC.xyz;\n"
+    "    EyePos = vec3(0.0,0.0,0.0);\n"
+    "    float lengthED = length(EyeDir);\n"
+    "    EyeDir = normalize(EyeDir);\n"
     // we adjust the EyePos to be closer if it is too far away
     // to prevent floating point precision noise
-    "  float lengthED = length(EyeDir);\n"
-    "  EyeDir = normalize(EyeDir);\n"
-    "  if (lengthED > radiusVC*3.0) { EyePos = vertexVC.xyz - EyeDir*3.0*radiusVC;}\n"
+    "    if (lengthED > radiusVC*3.0) {\n"
+    "      EyePos = vertexVC.xyz - EyeDir*3.0*radiusVC; }\n"
+    "    }\n"
 
     // translate to Sphere center
     "  EyePos = EyePos - centerVC;\n"
@@ -114,7 +124,7 @@ void vtkOpenGLSphereMapper::ReplaceShaderValues(std::string &VSSource,
 
   if (ren->GetLastRenderingUsedDepthPeeling())
     {
-    FSSource = vtkgl::replace(FSSource,
+    substitute(FSSource,
       "//VTK::DepthPeeling::Impl",
       "float odepth = texture2D(opaqueZTexture, gl_FragCoord.xy/screenSize).r;\n"
       "  if (gl_FragDepth >= odepth) { discard; }\n"
@@ -123,7 +133,8 @@ void vtkOpenGLSphereMapper::ReplaceShaderValues(std::string &VSSource,
       );
     }
 
-  this->Superclass::ReplaceShaderValues(VSSource,FSSource,GSSource,lightComplexity,ren,actor);
+  this->Superclass::ReplaceShaderValues(VSSource,FSSource,GSSource,
+                                        lightComplexity,ren,actor);
 }
 
 //-----------------------------------------------------------------------------
@@ -134,14 +145,34 @@ vtkOpenGLSphereMapper::~vtkOpenGLSphereMapper()
 
 
 //-----------------------------------------------------------------------------
-void vtkOpenGLSphereMapper::SetCameraShaderParameters(vtkgl::CellBO &cellBO,
-                                                    vtkRenderer* ren, vtkActor *actor)
+void vtkOpenGLSphereMapper::SetCameraShaderParameters(
+  vtkgl::CellBO &cellBO,
+  vtkRenderer* ren, vtkActor *actor)
 {
-  // do the superclass and then reset a couple values
-  this->Superclass::SetCameraShaderParameters(cellBO,ren,actor);
+  vtkShaderProgram *program = cellBO.Program;
 
-  // add in uniforms for parallel and distance
-  vtkCamera *cam = ren->GetActiveCamera();
+  vtkOpenGLCamera *cam = (vtkOpenGLCamera *)(ren->GetActiveCamera());
+
+  vtkMatrix4x4 *wcdc;
+  vtkMatrix4x4 *wcvc;
+  vtkMatrix3x3 *norms;
+  vtkMatrix4x4 *vcdc;
+  cam->GetKeyMatrices(ren,wcvc,norms,vcdc,wcdc);
+  program->SetUniformMatrix("VCDCMatrix", vcdc);
+
+  if (!actor->GetIsIdentity())
+    {
+    vtkMatrix4x4 *mcwc;
+    vtkMatrix3x3 *anorms;
+    ((vtkOpenGLActor *)actor)->GetKeyMatrices(mcwc,anorms);
+    vtkMatrix4x4::Multiply4x4(mcwc, wcvc, this->TempMatrix4);
+    program->SetUniformMatrix("MCVCMatrix", this->TempMatrix4);
+    }
+  else
+    {
+    program->SetUniformMatrix("MCVCMatrix", wcvc);
+    }
+
   cellBO.Program->SetUniformi("cameraParallel", cam->GetParallelProjection());
 }
 
@@ -149,7 +180,7 @@ void vtkOpenGLSphereMapper::SetCameraShaderParameters(vtkgl::CellBO &cellBO,
 void vtkOpenGLSphereMapper::SetMapperShaderParameters(vtkgl::CellBO &cellBO,
                                                          vtkRenderer *ren, vtkActor *actor)
 {
-  if (cellBO.indexCount && (this->OpenGLUpdateTime > cellBO.attributeUpdateTime ||
+  if (cellBO.indexCount && (this->VBOBuildTime > cellBO.attributeUpdateTime ||
       cellBO.ShaderSourceTime > cellBO.attributeUpdateTime))
     {
     vtkgl::VBOLayout &layout = this->Layout;
@@ -159,12 +190,6 @@ void vtkOpenGLSphereMapper::SetMapperShaderParameters(vtkgl::CellBO &cellBO,
                                     layout.Stride, VTK_FLOAT, 2, false))
       {
       vtkErrorMacro(<< "Error setting 'offsetMC' in shader VAO.");
-      }
-    if (!cellBO.vao.AddAttributeArray(cellBO.Program, this->VBO,
-                                    "radiusMC", layout.ColorOffset+sizeof(float)*3,
-                                    layout.Stride, VTK_FLOAT, 1, false))
-      {
-      vtkErrorMacro(<< "Error setting 'radiusMC' in shader VAO.");
       }
     }
 
@@ -198,8 +223,8 @@ vtkgl::VBOLayout vtkOpenGLSphereMapperCreateVBO(float * points, vtkIdType numPts
   layout.ColorOffset = sizeof(float) * blockSize;
   ++blockSize;
 
-  // three more floats
-  blockSize += 3;
+  // two more floats
+  blockSize += 2;
   layout.Stride = sizeof(float) * blockSize;
 
   // Create a buffer, and copy the data over.
@@ -225,7 +250,6 @@ vtkgl::VBOLayout vtkOpenGLSphereMapperCreateVBO(float * points, vtkIdType numPts
     *(it++) = *reinterpret_cast<float *>(colorPtr);
     *(it++) = -2.0f*radius*cos30;
     *(it++) = -radius;
-    *(it++) = radius;
 
     *(it++) = pointPtr[0];
     *(it++) = pointPtr[1];
@@ -233,7 +257,6 @@ vtkgl::VBOLayout vtkOpenGLSphereMapperCreateVBO(float * points, vtkIdType numPts
     *(it++) = *reinterpret_cast<float *>(colorPtr);
     *(it++) = 2.0f*radius*cos30;
     *(it++) = -radius;
-    *(it++) = radius;
 
     *(it++) = pointPtr[0];
     *(it++) = pointPtr[1];
@@ -241,7 +264,6 @@ vtkgl::VBOLayout vtkOpenGLSphereMapperCreateVBO(float * points, vtkIdType numPts
     *(it++) = *reinterpret_cast<float *>(colorPtr);
     *(it++) = 0.0f;
     *(it++) = 2.0f*radius;
-    *(it++) = radius;
     }
   vertexBuffer.Upload(packedVBO, vtkgl::BufferObject::ArrayBuffer);
   layout.VertexCount = numPts*3;
@@ -249,23 +271,22 @@ vtkgl::VBOLayout vtkOpenGLSphereMapperCreateVBO(float * points, vtkIdType numPts
 }
 }
 
-size_t vtkOpenGLSphereMapperCreateTriangleIndexBuffer(
-  vtkgl::BufferObject &indexBuffer,
-  int numPts)
+//-------------------------------------------------------------------------
+bool vtkOpenGLSphereMapper::GetNeedToRebuildBufferObjects(vtkRenderer *vtkNotUsed(ren), vtkActor *act)
 {
-  std::vector<unsigned int> indexArray;
-  indexArray.reserve(numPts * 3);
-
-  for (int i = 0; i < numPts*3; i++)
+  // picking state does not require a rebuild, unlike our parent
+  if (this->VBOBuildTime < this->GetMTime() ||
+      this->VBOBuildTime < act->GetMTime() ||
+      this->VBOBuildTime < this->CurrentInput->GetMTime())
     {
-    indexArray.push_back(i);
+    return true;
     }
-  indexBuffer.Upload(indexArray, vtkgl::BufferObject::ElementArrayBuffer);
-  return indexArray.size();
+  return false;
 }
 
 //-------------------------------------------------------------------------
-void vtkOpenGLSphereMapper::UpdateVBO(vtkRenderer *vtkNotUsed(ren), vtkActor *act)
+void vtkOpenGLSphereMapper::BuildBufferObjects(
+  vtkRenderer *vtkNotUsed(ren), vtkActor *vtkNotUsed(act))
 {
   vtkPolyData *poly = this->CurrentInput;
 
@@ -280,7 +301,7 @@ void vtkOpenGLSphereMapper::UpdateVBO(vtkRenderer *vtkNotUsed(ren), vtkActor *ac
   // I moved this out of the conditional because it is fast.
   // Color arrays are cached. If nothing has changed,
   // then the scalars do not have to be regenerted.
-  this->MapScalars(act->GetProperty()->GetOpacity());
+  this->MapScalars(1.0);
 
   // Iterate through all of the different types in the polydata, building OpenGLs
   // and IBOs as appropriate for each type.
@@ -296,9 +317,7 @@ void vtkOpenGLSphereMapper::UpdateVBO(vtkRenderer *vtkNotUsed(ren), vtkActor *ac
   this->Points.indexCount = 0;
   this->Lines.indexCount = 0;
   this->TriStrips.indexCount = 0;
-  this->Tris.indexCount =
-    vtkOpenGLSphereMapperCreateTriangleIndexBuffer(this->Tris.ibo,
-      poly->GetPoints()->GetNumberOfPoints());
+  this->Tris.indexCount = this->Layout.VertexCount;
 }
 
 
@@ -328,12 +347,7 @@ void vtkOpenGLSphereMapper::RenderPieceDraw(vtkRenderer* ren, vtkActor *actor)
     {
     // First we do the triangles, update the shader, set uniforms, etc.
     this->UpdateShader(this->Tris, ren, actor);
-    this->Tris.ibo.Bind();
-    glDrawRangeElements(GL_TRIANGLES, 0,
-                        static_cast<GLuint>(layout.VertexCount - 1),
-                        static_cast<GLsizei>(this->Tris.indexCount),
-                        GL_UNSIGNED_INT,
-                        reinterpret_cast<const GLvoid *>(NULL));
-    this->Tris.ibo.Release();
+    glDrawArrays(GL_TRIANGLES, 0,
+                static_cast<GLuint>(layout.VertexCount));
     }
 }

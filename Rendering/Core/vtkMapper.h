@@ -49,8 +49,8 @@
 // .SECTION See Also
 // vtkDataSetMapper vtkPolyDataMapper
 
-#ifndef __vtkMapper_h
-#define __vtkMapper_h
+#ifndef vtkMapper_h
+#define vtkMapper_h
 
 #include "vtkRenderingCoreModule.h" // For export macro
 #include "vtkAbstractMapper3D.h"
@@ -373,6 +373,8 @@ public:
   // allows the blending of the scalars with an additional alpha (typically
   // which comes from a vtkActor, etc.)
   virtual vtkUnsignedCharArray *MapScalars(double alpha);
+  virtual vtkUnsignedCharArray *MapScalars(vtkDataSet *input,
+                                           double alpha);
 
   // Description:
   // Set/Get the light-model color mode.

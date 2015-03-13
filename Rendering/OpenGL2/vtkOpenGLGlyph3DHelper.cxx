@@ -36,7 +36,7 @@
 
 #include "vtkglGlyph3DVSFragmentLit.h"
 
-using vtkgl::replace;
+using vtkgl::substitute;
 
 //-----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkOpenGLGlyph3DHelper)
@@ -74,28 +74,37 @@ void vtkOpenGLGlyph3DHelper::ReplaceShaderValues(std::string &VSSource,
                                                  vtkRenderer* ren,
                                                  vtkActor *actor)
 {
-  // we use vertex instead of vertexMC
-  VSSource = replace(VSSource,
-    "//VTK::PositionVC::Impl",
-    "vertexVC = MCVCMatrix * vertex;\n"
-    "  gl_Position = VCDCMatrix * vertexVC;\n");
+  if (lightComplexity > 0)
+    {
+    // we use vertex instead of vertexMC
+    substitute(VSSource,
+      "//VTK::PositionVC::Impl",
+      "vertexVC = MCVCMatrix * vertex;\n"
+      "  gl_Position = MCDCMatrix * vertex;\n");
+    }
+  else
+    {
+    substitute(VSSource,
+      "//VTK::PositionVC::Impl",
+      "gl_Position = MCDCMatrix * vertex;\n");
+    }
 
   // deal with color
   if (this->UsingInstancing)
     {
-    VSSource = replace(VSSource,"//VTK::Color::Dec",
-                              "attribute vec4 glyphColor;\n"
-                              "varying vec4 vertexColor;");
+    substitute(VSSource,"//VTK::Color::Dec",
+                        "attribute vec4 glyphColor;\n"
+                        "varying vec4 vertexColor;");
     }
   else
     {
-    VSSource = replace(VSSource,
-                       "//VTK::Color::Dec",
-                       "uniform vec4 glyphColor;\n"
-                       "varying vec4 vertexColor;");
+    substitute(VSSource,
+               "//VTK::Color::Dec",
+               "uniform vec4 glyphColor;\n"
+               "varying vec4 vertexColor;");
     }
-  VSSource = replace(VSSource,"//VTK::Color::Impl",
-                            "vertexColor =  glyphColor;");
+  substitute(VSSource,"//VTK::Color::Impl",
+                      "vertexColor =  glyphColor;");
 
 
   // crate the material/color property declarations, and VS implementation
@@ -126,7 +135,7 @@ void vtkOpenGLGlyph3DHelper::ReplaceShaderValues(std::string &VSSource,
       }
     }
   colorDec += "varying vec4 vertexColor;\n";
-  FSSource = replace(FSSource,"//VTK::Color::Dec", colorDec);
+  substitute(FSSource,"//VTK::Color::Dec", colorDec);
 
   // now handle the more complex fragment shader implementation
   // the following are always defined variables.  We start
@@ -188,40 +197,42 @@ void vtkOpenGLGlyph3DHelper::ReplaceShaderValues(std::string &VSSource,
 
   // now handle scalar coloring
   if (this->ScalarMaterialMode == VTK_MATERIALMODE_AMBIENT ||
-        (this->ScalarMaterialMode == VTK_MATERIALMODE_DEFAULT && actor->GetProperty()->GetAmbient() > actor->GetProperty()->GetDiffuse()))
+        (this->ScalarMaterialMode == VTK_MATERIALMODE_DEFAULT &&
+         actor->GetProperty()->GetAmbient() > actor->GetProperty()->GetDiffuse()))
     {
-    FSSource = replace(FSSource,"//VTK::Color::Impl", colorImpl +
-                                "  ambientColor = vertexColor.rgb;\n"
-                                "  opacity = vertexColor.a;");
+    substitute(FSSource,"//VTK::Color::Impl", colorImpl +
+                        "  ambientColor = vertexColor.rgb;\n"
+                        "  opacity = vertexColor.a;");
     }
   else if (this->ScalarMaterialMode == VTK_MATERIALMODE_DIFFUSE ||
-        (this->ScalarMaterialMode == VTK_MATERIALMODE_DEFAULT && actor->GetProperty()->GetAmbient() <= actor->GetProperty()->GetDiffuse()))
+        (this->ScalarMaterialMode == VTK_MATERIALMODE_DEFAULT &&
+         actor->GetProperty()->GetAmbient() <= actor->GetProperty()->GetDiffuse()))
     {
-    FSSource = replace(FSSource,"//VTK::Color::Impl", colorImpl +
-                                "  diffuseColor = vertexColor.rgb;\n"
-                                "  opacity = vertexColor.a;");
+    substitute(FSSource,"//VTK::Color::Impl", colorImpl +
+                        "  diffuseColor = vertexColor.rgb;\n"
+                        "  opacity = vertexColor.a;");
     }
   else
     {
-    FSSource = replace(FSSource,"//VTK::Color::Impl", colorImpl +
-                                "  diffuseColor = vertexColor.rgb;\n"
-                                "  ambientColor = vertexColor.rgb;\n"
-                                "  opacity = vertexColor.a;");
+    substitute(FSSource,"//VTK::Color::Impl", colorImpl +
+                        "  diffuseColor = vertexColor.rgb;\n"
+                        "  ambientColor = vertexColor.rgb;\n"
+                        "  opacity = vertexColor.a;");
     }
 
   if (this->UsingInstancing)
     {
-    VSSource = replace(VSSource,
+    substitute(VSSource,
                        "//VTK::Glyph::Dec",
                        "attribute mat4 GCMCMatrix;");
     }
   else
     {
-    VSSource = replace(VSSource,
+    substitute(VSSource,
                        "//VTK::Glyph::Dec",
                        "uniform mat4 GCMCMatrix;");
     }
-  VSSource = replace(VSSource,
+  substitute(VSSource,
                      "//VTK::Glyph::Impl",
                      "vec4 vertex = GCMCMatrix * vertexMC;\n");
 
@@ -230,23 +241,25 @@ void vtkOpenGLGlyph3DHelper::ReplaceShaderValues(std::string &VSSource,
     {
     if (this->UsingInstancing)
       {
-      VSSource = replace(VSSource,
-                                   "//VTK::Normal::Dec",
-                                   "attribute vec3 normalMC;\n"
-                                   "attribute mat3 glyphNormalMatrix;\n"
-                                   "varying vec3 normalVCVarying;");
+      substitute(VSSource,
+                         "//VTK::Normal::Dec",
+                         "uniform mat3 normalMatrix;\n"
+                         "attribute vec3 normalMC;\n"
+                         "attribute mat3 glyphNormalMatrix;\n"
+                         "varying vec3 normalVCVarying;");
       }
     else
       {
-      VSSource = replace(VSSource,
-                                   "//VTK::Normal::Dec",
-                                   "attribute vec3 normalMC;\n"
-                                   "uniform mat3 glyphNormalMatrix;\n"
-                                   "varying vec3 normalVCVarying;");
+      substitute(VSSource,
+                         "//VTK::Normal::Dec",
+                         "uniform mat3 normalMatrix;\n"
+                         "attribute vec3 normalMC;\n"
+                         "uniform mat3 glyphNormalMatrix;\n"
+                         "varying vec3 normalVCVarying;");
       }
-    VSSource = replace(VSSource,
-                       "//VTK::Normal::Impl",
-                       "normalVCVarying = normalMatrix * glyphNormalMatrix * normalMC;");
+    substitute(VSSource, "//VTK::Normal::Impl",
+      "normalVCVarying = normalMatrix * glyphNormalMatrix * normalMC;");
+    this->ShaderVariablesUsed.push_back("normalMatrix");
     }
 
   // override one part of the clipping code
@@ -260,16 +273,17 @@ void vtkOpenGLGlyph3DHelper::ReplaceShaderValues(std::string &VSSource,
       numClipPlanes = 6;
       }
 
-    VSSource = vtkgl::replace(VSSource,
-                         "//VTK::Clip::Impl",
-                         "for (int planeNum = 0; planeNum < numClipPlanes; planeNum++)\n"
-                         "    {\n"
-                         "    clipDistances[planeNum] = dot(clipPlanes[planeNum], vertex);\n"
-                         "    }\n");
+    substitute(VSSource,
+       "//VTK::Clip::Impl",
+       "for (int planeNum = 0; planeNum < numClipPlanes; planeNum++)\n"
+       "    {\n"
+       "    clipDistances[planeNum] = dot(clipPlanes[planeNum], vertex);\n"
+       "    }\n");
     }
 
 
-  this->Superclass::ReplaceShaderValues(VSSource,FSSource,GSSource,lightComplexity,ren,actor);
+  this->Superclass::ReplaceShaderValues(VSSource,FSSource,GSSource,
+                                        lightComplexity,ren,actor);
 }
 
 //-----------------------------------------------------------------------------
@@ -325,7 +339,8 @@ void vtkOpenGLGlyph3DHelper::GlyphRender(vtkRenderer* ren, vtkActor* actor, vtkI
     program->SetUniformMatrix4x4("GCMCMatrix", &(matrices[inPtId*16]));
 
     // for lit shaders set normal matrix
-    if (this->LastLightComplexity > 0 && this->Layout.NormalOffset)
+    if (this->LastLightComplexity > 0 && this->Layout.NormalOffset &&
+        !this->UsingInstancing)
       {
       program->SetUniformMatrix3x3("glyphNormalMatrix", &(normalMatrices[inPtId*9]));
       }
@@ -389,7 +404,8 @@ void vtkOpenGLGlyph3DHelper::SetCameraShaderParameters(vtkgl::CellBO &cellBO,
     }
 
   // for lit shaders set normal matrix
-  if (this->LastLightComplexity > 0 && this->ModelNormalMatrix && this->Layout.NormalOffset)
+  if (this->LastLightComplexity > 0 && this->ModelNormalMatrix &&
+     this->Layout.NormalOffset && !this->UsingInstancing)
     {
     program->SetUniformMatrix3x3("glyphNormalMatrix", this->ModelNormalMatrix);
     }
@@ -436,7 +452,7 @@ void vtkOpenGLGlyph3DHelper::GlyphRenderInstances(
 
   // do the superclass and then reset a couple values
   if (this->Tris.indexCount &&   // we have points and one of
-      (this->OpenGLUpdateTime > this->InstanceBuffersLoadTime ||
+      (this->VBOBuildTime > this->InstanceBuffersLoadTime ||
       this->Tris.ShaderSourceTime > this->InstanceBuffersLoadTime ||
       pointMTime > this->InstanceBuffersLoadTime.GetMTime()))
     {
@@ -451,7 +467,7 @@ void vtkOpenGLGlyph3DHelper::GlyphRenderInstances(
       }
     this->MatrixBuffer.Release();
 
-    if (this->Layout.NormalOffset)
+    if (this->Layout.NormalOffset && this->LastLightComplexity > 0)
       {
       this->NormalMatrixBuffer.Bind();
       this->NormalMatrixBuffer.Upload(normalMatrices, vtkgl::BufferObject::ArrayBuffer);

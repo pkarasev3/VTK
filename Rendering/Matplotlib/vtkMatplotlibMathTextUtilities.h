@@ -22,8 +22,8 @@
 // - VTK_MATPLOTLIB_DEBUG: Enable verbose debugging output during initialization
 // of the python environment.
 
-#ifndef __vtkMatplotlibMathTextUtilities_h
-#define __vtkMatplotlibMathTextUtilities_h
+#ifndef vtkMatplotlibMathTextUtilities_h
+#define vtkMatplotlibMathTextUtilities_h
 
 #include "vtkRenderingMatplotlibModule.h" // For export macro
 #include "vtkMathTextUtilities.h"
@@ -52,6 +52,9 @@ public:
   // Returns true on success, false otherwise.
   bool GetBoundingBox(vtkTextProperty *tprop, const char *str,
                       unsigned int dpi, int bbox[4]);
+
+  bool GetMetrics(vtkTextProperty *tprop, const char *str,
+                  unsigned int dpi, vtkTextRenderer::Metrics &metrics);
 
   // Description:
   // Render the given string @a str into the vtkImageData @a data with a

@@ -396,6 +396,19 @@ bool QVTKWidget::event(QEvent* e)
         }
       }
     }
+  else if(e->type() == QEvent::TouchBegin ||
+          e->type() == QEvent::TouchUpdate ||
+          e->type() == QEvent::TouchEnd)
+    {
+    if(this->mRenWin)
+      {
+      mIrenAdapter->ProcessEvent(e, this->mRenWin->GetInteractor());
+      if (e->isAccepted())
+        {
+        return true;
+        }
+      }
+    }
 
   if(QObject::event(e))
     {
@@ -823,6 +836,17 @@ bool QVTKWidget::winEvent(MSG* msg, long*)
     }
   return false;
 }
+
+#if QT_VERSION >= 0x050000
+bool QVTKWidget::nativeEvent(const QByteArray& eventType, void* message, long* result)
+{
+  if (eventType == "windows_generic_MSG")
+    {
+    winEvent((MSG*)message, result);
+    }
+  return false;
+}
+#endif
 #endif
 
 #if defined (QVTK_USE_CARBON)

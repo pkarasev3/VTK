@@ -26,6 +26,7 @@ set(Module_SRCS
   vtkDefaultPass.cxx
   vtkDepthPeelingPass.cxx
   vtkGaussianBlurPass.cxx
+  vtkGenericCompositePolyDataMapper2.cxx
   vtkImageProcessingPass.cxx
   vtkLightsPass.cxx
   vtkOpaquePass.cxx
@@ -37,6 +38,7 @@ set(Module_SRCS
   vtkOpenGLImageMapper.cxx
   vtkOpenGLImageSliceMapper.cxx
   vtkOpenGLLight.cxx
+  vtkOpenGLPointGaussianMapper.cxx
   vtkOpenGLPolyDataMapper.cxx
   vtkOpenGLPolyDataMapper2D.cxx
   vtkOpenGLProperty.cxx
@@ -64,13 +66,18 @@ set(Module_SRCS
 
 if (NOT DEFINED OPENGL_ES_VERSION)
   set(Module_SRCS ${Module_SRCS}
+    vtkDataTransferHelper.cxx
     vtkFrameBufferObject.cxx
+    vtkFrameBufferObject2.cxx
     vtkPixelBufferObject.cxx
+    vtkRenderbuffer.cxx
     )
 else()
   if (${OPENGL_ES_VERSION} MATCHES 3.0)
     set(Module_SRCS ${Module_SRCS}
       vtkFrameBufferObject.cxx
+      vtkFrameBufferObject2.cxx
+      vtkRenderbuffer.cxx
       )
   endif()
 endif()
@@ -112,6 +119,7 @@ set(shader_files
   glsl/vtkGaussianBlurPassVS.glsl
   glsl/vtkSobelGradientMagnitudePass1FS.glsl
   glsl/vtkSobelGradientMagnitudePass2FS.glsl
+  glsl/vtkPointGaussianVS.glsl
   glsl/vtkTextureObjectFS.glsl
   glsl/vtkTextureObjectVS.glsl
   glsl/vtkglGlyph3DVSFragmentLit.glsl
@@ -172,6 +180,7 @@ set(opengl_overrides
   ImageSliceMapper
   Glyph3DMapper
   Light
+  PointGaussianMapper
   PolyDataMapper
   PolyDataMapper2D
   Property
@@ -217,11 +226,11 @@ elseif(VTK_USE_OSMESA)
 elseif(WIN32)
   # Add some custom overrides
   list(APPEND vtk_module_overrides "vtkRenderWindowInteractor")
-  set(vtk_module_vtkRenderWindowInteractor_override "vtkWin32OpenGLRenderWindowInteractor")
+  set(vtk_module_vtkRenderWindowInteractor_override "vtkWin32RenderWindowInteractor")
   list(APPEND vtk_module_overrides "vtkRenderWindow")
   set(vtk_module_vtkRenderWindow_override "vtkWin32OpenGLRenderWindow")
   list(APPEND Module_SRCS
-    vtkWin32OpenGLRenderWindowInteractor.cxx
+    vtkWin32RenderWindowInteractor.cxx
     vtkWin32OpenGLRenderWindow.cxx
     )
 elseif(VTK_USE_COCOA)

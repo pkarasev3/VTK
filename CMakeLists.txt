@@ -82,6 +82,22 @@ mark_as_advanced(CMAKE_RUNTIME_OUTPUT_DIRECTORY
   CMAKE_ARCHIVE_OUTPUT_DIRECTORY
   )
 
+include(vtkVersion)
+set(VTK_VERSION
+    "${VTK_MAJOR_VERSION}.${VTK_MINOR_VERSION}.${VTK_BUILD_VERSION}")
+
+option(VTK_IOS_BUILD "Build vtk.framework for iOS" OFF)
+if (VTK_IOS_BUILD)
+  include(vtkiOS)
+  return()
+endif()
+
+option(VTK_ANDROID_BUILD "Build VTK for Android" OFF)
+if (VTK_ANDROID_BUILD)
+  include(vtkAndroid)
+  return()
+endif()
+
 # some specific defaults for Andriod to give folks
 # a reasonable starting point
 if (ANDROID OR APPLE_IOS)
@@ -99,9 +115,6 @@ if (ANDROID OR APPLE_IOS)
      CACHE STRING "Result from TRY_RUN" FORCE)
   SET( KWSYS_LFS_WORKS__TRYRUN_OUTPUT ""
      CACHE STRING "Output from TRY_RUN" FORCE)
-
-  set(OPENGL_ES_VERSION "2.0" CACHE STRING "OpenGL ES version (2.0 or 3.0)")
-  set_property(CACHE OPENGL_ES_VERSION PROPERTY STRINGS 2.0 3.0)
 
   option(BUILD_SHARED_LIBS "should be off for embedded" OFF)
   set(VTK_RENDERING_BACKEND OpenGL2)
@@ -124,7 +137,6 @@ if (ANDROID OR APPLE_IOS)
   endif()
 
   if (APPLE_IOS)
-    option(Module_vtkInteractionStyle "needed for multitouch" ON)
     unset(OPENGL_INCLUDE_DIR CACHE)
     if (${OPENGL_ES_VERSION} MATCHES 2.0)
       find_path(OPENGL_INCLUDE_DIR ES2/gl.h
@@ -141,18 +153,35 @@ if (ANDROID OR APPLE_IOS)
          ${CMAKE_OSX_SYSROOT}/System/Library/Frameworks
          ${_OPENGL_LIB_PATH}
        )
-  else ()
-    # find opengl es2 (maybe someday add an option for ES3)
-    find_path(OPENGL_INCLUDE_DIR GLES2/gl2.h
-       ${ANDROID_NDK}/platforms/android-${ANDROID_NATIVE_API_LEVEL}/arch-${ANDROID_ARCH_NAME}/usr/include
-       ${_OPENGL_INCLUDE_PATH}
-       )
-    find_library(OPENGL_gl_LIBRARY
-       NAMES GLESv2
-       PATHS
-         ${ANDROID_NDK}/platforms/android-${ANDROID_NATIVE_API_LEVEL}/arch-${ANDROID_ARCH_NAME}/usr/lib
-         ${_OPENGL_LIB_PATH}
-       )
+  elseif (ANDROID)
+    unset(OPENGL_INCLUDE_DIR CACHE)
+    unset(OPENGL_gl_LIBRARY CACHE)
+    unset(OPENGL_egl_LIBRARY CACHE)
+
+    if (${OPENGL_ES_VERSION} MATCHES 2.0)
+      find_path(OPENGL_INCLUDE_DIR GLES2/gl2.h
+         ${ANDROID_NDK}/platforms/android-${ANDROID_NATIVE_API_LEVEL}/arch-${ANDROID_ARCH_NAME}/usr/include
+         ${_OPENGL_INCLUDE_PATH}
+         NO_DEFAULT_PATH
+         )
+      find_library(OPENGL_gl_LIBRARY
+         NAMES GLESv2
+         PATHS
+           ${ANDROID_NDK}/platforms/android-${ANDROID_NATIVE_API_LEVEL}/arch-${ANDROID_ARCH_NAME}/usr/lib
+           ${_OPENGL_LIB_PATH}
+         )
+    elseif (${OPENGL_ES_VERSION} MATCHES 3.0)
+      find_path(OPENGL_INCLUDE_DIR GLES3/gl3.h
+         ${ANDROID_NDK}/platforms/android-${ANDROID_NATIVE_API_LEVEL}/arch-${ANDROID_ARCH_NAME}/usr/include
+         ${_OPENGL_INCLUDE_PATH}
+         )
+      find_library(OPENGL_gl_LIBRARY
+         NAMES GLESv3
+         PATHS
+           ${ANDROID_NDK}/platforms/android-${ANDROID_NATIVE_API_LEVEL}/arch-${ANDROID_ARCH_NAME}/usr/lib
+           ${_OPENGL_LIB_PATH}
+         )
+    endif()
     find_library(OPENGL_egl_LIBRARY
        NAMES EGL
        PATHS
@@ -168,10 +197,6 @@ endif()
 set(VTK_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 
 #-----------------------------------------------------------------------------
-include(vtkVersion)
-set(VTK_VERSION
-    "${VTK_MAJOR_VERSION}.${VTK_MINOR_VERSION}.${VTK_BUILD_VERSION}")
-
 # VTK installation structure
 if(NOT VTK_INSTALL_RUNTIME_DIR)
   set(VTK_INSTALL_RUNTIME_DIR bin)
@@ -522,17 +547,6 @@ foreach(vtk-module ${VTK_MODULES_ALL})
 endforeach()
 configure_file("${VTK_CMAKE_DIR}/CTestCustom.cmake.in"
   "${CMAKE_CURRENT_BINARY_DIR}/CTestCustom.cmake" @ONLY)
-
-# For iOS builds, allow user to 'make framework' with a custom destination
-if (APPLE_IOS)
-  set(CMAKE_FRAMEWORK_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/frameworks"
-      CACHE PATH "Framework install path")
-  configure_file(${VTK_CMAKE_DIR}/MakeFramework.cmake.in
-                 ${CMAKE_CURRENT_BINARY_DIR}/CMake/MakeFramework.cmake
-                 @ONLY)
-  add_custom_target(framework COMMAND ${CMAKE_COMMAND} -P
-                    ${CMAKE_CURRENT_BINARY_DIR}/CMake/MakeFramework.cmake)
-endif()
 
 #-----------------------------------------------------------------------------
 # Export all targets at once from the build tree in their final configuration.

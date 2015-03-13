@@ -17,8 +17,8 @@
 // vtkPoints represents 3D points. The data model for vtkPoints is an
 // array of vx-vy-vz triplets accessible by (point or cell) id.
 
-#ifndef __vtkPoints_h
-#define __vtkPoints_h
+#ifndef vtkPoints_h
+#define vtkPoints_h
 
 #include "vtkCommonCoreModule.h" // For export macro
 #include "vtkObject.h"
@@ -137,6 +137,21 @@ public:
   void InsertPoint(vtkIdType id, const double x[3])
     {this->Data->InsertTuple(id,x);};
   void InsertPoint(vtkIdType id, double x, double y, double z);
+
+  // Description:
+  // Copy the points indexed in srcIds from the source array to the tuple
+  // locations indexed by dstIds in this array.
+  // Note that memory allocation is performed as necessary to hold the data.
+  void InsertPoints(vtkIdList *dstIds, vtkIdList *srcIds, vtkPoints *source)
+    { this->Data->InsertTuples(dstIds, srcIds, source->Data); }
+
+  // Description:
+  // Copy n consecutive points starting at srcStart from the source array to
+  // this array, starting at the dstStart location.
+  // Note that memory allocation is performed as necessary to hold the data.
+  void InsertPoints(vtkIdType dstStart, vtkIdType n, vtkIdType srcStart,
+                    vtkPoints* source)
+    { this->Data->InsertTuples(dstStart, n, srcStart, source->Data); }
 
   // Description:
   // Insert point into next available slot. Returns id of slot.

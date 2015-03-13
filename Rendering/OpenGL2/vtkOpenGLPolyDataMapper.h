@@ -15,8 +15,8 @@
 // .SECTION Description
 // PolyDataMapper that uses a OpenGL to do the actual rendering.
 
-#ifndef __vtkOpenGLPolyDataMapper_h
-#define __vtkOpenGLPolyDataMapper_h
+#ifndef vtkOpenGLPolyDataMapper_h
+#define vtkOpenGLPolyDataMapper_h
 
 #include "vtkRenderingOpenGL2Module.h" // For export macro
 #include "vtkPolyDataMapper.h"
@@ -152,8 +152,16 @@ protected:
   virtual void SetPropertyShaderParameters(vtkgl::CellBO &cellBO, vtkRenderer *ren, vtkActor *act);
 
   // Description:
-  // Update the VBO to contain point based values
-  virtual void UpdateVBO(vtkRenderer *ren, vtkActor *act);
+  // Update the VBO/IBO to be current
+  virtual void UpdateBufferObjects(vtkRenderer *ren, vtkActor *act);
+
+  // Description:
+  // Does the VBO/IBO need to be rebuilt
+  virtual bool GetNeedToRebuildBufferObjects(vtkRenderer *ren, vtkActor *act);
+
+  // Description:
+  // Build the VBO/IBO, called by UpdateBufferObjects
+  virtual void BuildBufferObjects(vtkRenderer *ren, vtkActor *act);
 
   // The VBO and its layout.
   vtkgl::BufferObject VBO;
@@ -180,7 +188,7 @@ protected:
   vtkTimeStamp DepthPeelingChanged;
 
   bool UsingScalarColoring;
-  vtkTimeStamp OpenGLUpdateTime; // When was the OpenGL updated?
+  vtkTimeStamp VBOBuildTime; // When was the OpenGL VBO updated?
   vtkOpenGLTexture* InternalColorTexture;
 
   int PopulateSelectionSettings;
@@ -189,6 +197,24 @@ protected:
   vtkMatrix4x4 *TempMatrix4;
   vtkMatrix3x3 *TempMatrix3;
 
+  // this vector can be used while building
+  // the shader program to record specific variables
+  // that are being used by the program. This is
+  // useful later on when setting uniforms. At
+  // that point IsShaderVariableUsed can be called
+  // to see if the uniform should be set or not.
+  std::vector<std::string> ShaderVariablesUsed;
+
+  // used to see if the shader building code indicated that
+  // a specific variable is being used. Only some variables
+  // are currently populated.
+  bool IsShaderVariableUsed(const char *);
+
+  // if set to true, tcoords will be passed to the
+  // VBO even if the mapper knows of no texture maps
+  // normally tcoords are only added to the VBO if the
+  // mapper has indentified a texture map as well.
+  bool ForceTextureCoordinates;
 
 private:
   vtkOpenGLPolyDataMapper(const vtkOpenGLPolyDataMapper&); // Not implemented.

@@ -40,7 +40,13 @@ endif()
 
 if ("${VTK_SMP_IMPLEMENTATION_TYPE}" STREQUAL "TBB")
   find_package(TBB REQUIRED)
-  set(VTK_SMP_IMPLEMENTATION_LIBRARIES ${TBB_LIBRARY})
+  set(VTK_SMP_IMPLEMENTATION_LIBRARIES "")
+  if (TBB_LIBRARY)
+    list(APPEND VTK_SMP_IMPLEMENTATION_LIBRARIES optimized ${TBB_LIBRARY})
+  endif()
+  if (TBB_LIBRARY_DEBUG)
+    list(APPEND VTK_SMP_IMPLEMENTATION_LIBRARIES debug ${TBB_LIBRARY_DEBUG})
+  endif()
   set(VTK_SMP_ATOMIC_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/SMP/TBB")
   include_directories(${TBB_INCLUDE_DIRS})
   # This needs to be here because all modules that include vtkAtomic.h
@@ -196,6 +202,7 @@ SET(Module_SRCS
   vtkWindow.cxx
   vtkXMLFileOutputWindow.cxx
   vtkDataArrayTemplate.txx
+  vtkDataArrayTemplateHelper.cxx
   vtkDenseArray.txx
   vtkSparseArray.txx
   vtkTypedArray.txx
@@ -519,6 +526,7 @@ set_source_files_properties(
   vtkArrayPrint.txx
   vtkAutoInit.h
   vtkDataArrayTemplate.txx
+  vtkDataArrayTemplateHelper.cxx
   vtkDataArrayTemplateImplicit.txx
   vtkDenseArray.txx
   vtkIOStreamFwd.h

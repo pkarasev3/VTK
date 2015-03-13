@@ -27,10 +27,7 @@
 // DC - Display Coordinates
 
 // camera and actor matrix values
-uniform mat4 MCVCMatrix;  // combined Model to View transform
-uniform mat4 VCDCMatrix;  // the camera's projection matrix
-uniform mat3 normalMatrix; // transform model coordinate directions to view coordinates
-
+//VTK::Camera::Dec
 
 uniform int numberOfLights; // only allow for up to 6 active lights
 uniform vec3 lightColor[6]; // intensity weighted color
@@ -125,10 +122,10 @@ void main()
   diffuse = diffuse * diffuseColor;
   specular = specular * specularColor;
 
-  gl_FragColor = vec4(ambientColor + diffuse + specular, opacity);
+  gl_FragData[0] = vec4(ambientColor + diffuse + specular, opacity);
   //VTK::TCoord::Impl
 
-  if (gl_FragColor.a <= 0.0)
+  if (gl_FragData[0].a <= 0.0)
     {
     discard;
     }

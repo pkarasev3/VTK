@@ -13,8 +13,8 @@
 
 =========================================================================*/
 
-#ifndef __vtkOpenGLGPUVolumeRayCastMapper_h
-#define __vtkOpenGLGPUVolumeRayCastMapper_h
+#ifndef vtkOpenGLGPUVolumeRayCastMapper_h
+#define vtkOpenGLGPUVolumeRayCastMapper_h
 
 #include "vtkRenderingVolumeOpenGL2Module.h" // For export macro
 
@@ -49,7 +49,7 @@ protected:
                          vtkVolume *vtkNotUsed(vol),
                          double vtkNotUsed(datasetBounds)[6],
                          double vtkNotUsed(scalarRange)[2],
-                         int vtkNotUsed(numberOfScalarComponents),
+                         int vtkNotUsed(noOfComponents),
                          unsigned int vtkNotUsed(numberOfLevels)) {}
 
   // \pre input is up-to-date
@@ -58,7 +58,7 @@ protected:
                            unsigned int vtkNotUsed(level)) {}
 
   virtual void PostRender(vtkRenderer *vtkNotUsed(ren),
-                          int vtkNotUsed(numberOfScalarComponents)) {}
+                          int vtkNotUsed(noOfComponents)) {}
 
   // Description:
   // Rendering volume on GPU
@@ -101,4 +101,4 @@ private:
   void operator=(const vtkOpenGLGPUVolumeRayCastMapper&); // Not implemented.
 };
 
-#endif // __vtkOpenGLGPUVolumeRayCastMapper_h
+#endif // vtkOpenGLGPUVolumeRayCastMapper_h

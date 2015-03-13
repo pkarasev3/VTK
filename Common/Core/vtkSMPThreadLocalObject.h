@@ -64,8 +64,8 @@
 // .SECTION See Also
 // vtkSMPThreadLocal
 
-#ifndef __vtkSMPThreadLocalObject_h
-#define __vtkSMPThreadLocalObject_h
+#ifndef vtkSMPThreadLocalObject_h
+#define vtkSMPThreadLocalObject_h
 
 #include "vtkSMPThreadLocal.h"
 
@@ -126,8 +126,15 @@ public:
   }
 
   // Description:
+  // Return the number of thread local objects that have been initialized
+  size_t size() const
+    {
+    return this->Internal.size();
+    }
+
+  // Description:
   // Subset of the standard iterator API.
-  // The most common design patter is to use iterators in a sequential
+  // The most common design pattern is to use iterators in a sequential
   // code block and to use only the thread local objects in parallel
   // code blocks.
   class iterator
@@ -139,6 +146,18 @@ public:
       return *this;
     }
 
+    iterator operator++(int)
+      {
+        iterator copy = *this;
+        ++this->Iter;
+        return copy;
+      }
+
+    bool operator==(const iterator& other)
+      {
+      return this->Iter == other.Iter;
+      }
+
     bool operator!=(const iterator& other)
     {
       return this->Iter != other.Iter;
@@ -148,6 +167,11 @@ public:
     {
       return *this->Iter;
     }
+
+    T** operator->()
+      {
+        return &*this->Iter;
+      }
 
   private:
     TLSIter Iter;

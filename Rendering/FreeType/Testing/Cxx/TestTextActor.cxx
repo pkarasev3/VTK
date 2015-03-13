@@ -112,6 +112,10 @@ int TestTextActor(int, char *[])
           break;
         }
       actor->GetTextProperty()->SetColor(0.75, .2 + col * .26, .2 + row * .2);
+      actor->GetTextProperty()->SetBackgroundColor(0.25, 0.4 - col * .13,
+                                                   .5 - row * .1);
+      actor->GetTextProperty()->SetBackgroundOpacity(1.0);
+
       actor->SetPosition(x[col], y[row]);
       setupTextActor(actor.GetPointer(), anchors.GetPointer());
       ren->AddActor2D(actor.GetPointer());
@@ -124,6 +128,27 @@ int TestTextActor(int, char *[])
   anchorActor->SetMapper(anchorMapper.GetPointer());
   anchorActor->GetProperty()->SetPointSize(5);
   ren->AddActor2D(anchorActor.GetPointer());
+
+  // Add some various 'empty' actors to make sure there are no surprises:
+  vtkNew<vtkTextActor> nullInputActor;
+  nullInputActor->SetInput(NULL);
+  ren->AddActor2D(nullInputActor.GetPointer());
+
+  vtkNew<vtkTextActor> emptyInputActor;
+  emptyInputActor->SetInput("");
+  ren->AddActor2D(emptyInputActor.GetPointer());
+
+  vtkNew<vtkTextActor> spaceActor;
+  spaceActor->SetInput(" ");
+  ren->AddActor2D(spaceActor.GetPointer());
+
+  vtkNew<vtkTextActor> tabActor;
+  tabActor->SetInput("\t");
+  ren->AddActor2D(tabActor.GetPointer());
+
+  vtkNew<vtkTextActor> newlineActor;
+  newlineActor->SetInput("\n");
+  ren->AddActor2D(newlineActor.GetPointer());
 
   vtkNew<vtkRenderWindow> win;
   win->AddRenderer(ren.GetPointer());

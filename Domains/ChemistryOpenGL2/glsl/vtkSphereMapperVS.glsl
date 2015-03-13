@@ -27,7 +27,6 @@
 
 attribute vec4 vertexMC;
 attribute vec2 offsetMC;
-attribute float radiusMC;
 
 // optional normal declaration
 //VTK::Normal::Dec
@@ -44,8 +43,7 @@ uniform mat3 normalMatrix; // transform model coordinate directions to view coor
 //VTK::Clip::Dec
 
 // camera and actor matrix values
-uniform mat4 MCVCMatrix;  // combined Model to View transform
-uniform mat4 VCDCMatrix;  // the camera's projection matrix
+//VTK::Camera::Dec
 
 varying vec4 vertexVCClose;
 varying float radiusVC;
@@ -66,7 +64,7 @@ void main()
   // compute the projected vertex position
   vertexVCClose = MCVCMatrix * vertexMC;
   centerVC = vertexVCClose.xyz;
-  radiusVC = radiusMC;
+  radiusVC = length(offsetMC)*0.5;
 
   // make the triangle face the camera
   if (cameraParallel == 0)

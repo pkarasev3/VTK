@@ -6,20 +6,20 @@ set (GenericVolumeCxxTests
   TestFixedPointRayCastLightComponents.cxx
   TestGPURayCastAdditive.cxx
   TestGPURayCastCompositeBinaryMask.cxx
-  TestGPURayCastCompositeMask.cxx
   TestGPURayCastCompositeMaskBlend.cxx
+  TestGPURayCastCompositeMask.cxx
   TestGPURayCastCompositeToMIP.cxx
   TestGPURayCastCropping.cxx
-  TestGPURayCastDataTypesMIP.cxx
   TestGPURayCastDataTypesMinIP.cxx
+  TestGPURayCastDataTypesMIP.cxx
   TestGPURayCastFourComponentsComposite.cxx
   TestGPURayCastFourComponentsCompositeStreaming.cxx
-  TestGPURayCastFourComponentsMIP.cxx
   TestGPURayCastFourComponentsMinIP.cxx
-  TestGPURayCastMIPBinaryMask.cxx
-  TestGPURayCastMIPToComposite.cxx
+  TestGPURayCastFourComponentsMIP.cxx
   TestGPURayCastMapperBenchmark.cxx
   TestGPURayCastMapperSampleDistance.cxx
+  TestGPURayCastMIPBinaryMask.cxx
+  TestGPURayCastMIPToComposite.cxx
   TestGPURayCastNearestDataTypesMIP.cxx
   TestGPURayCastPerspectiveParallel.cxx
   TestGPURayCastVolumeUpdate.cxx
@@ -36,9 +36,11 @@ set (OpenGLNew_OR_OpenGL2_CxxTests
   TestGPURayCastClipping.cxx
   #TestGPURayCastCropping1.cxx
   #TestGPURayCastDataTypesMinIP1.cxx
+  TestGPURayCastGradientOpacity.cxx
   TestGPURayCastVolumePolyData.cxx
   TestGPURayCastVolumeRotation.cxx
   TestGPURayCastVolumeScale.cxx
+  TestGPURayCastReleaseResources.cxx
   )
 
 if ("${VTK_RENDERING_BACKEND}" STREQUAL "OpenGL2")
@@ -50,7 +52,6 @@ endif()
 
 # These tests are built for the OpenGL backend
 set (VolumeOpenGLCxxTests
-  #  TestGPUCastGradientOpacity.cxx
   HomogeneousRayIntegration.cxx
   LinearRayIntegration.cxx
   PartialPreIntegration.cxx

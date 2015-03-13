@@ -106,6 +106,10 @@ int TestTextActor3D(int, char *[])
       actor->GetTextProperty()->SetFontSize(20);
       actor->GetTextProperty()->SetOrientation(45.0 * (3 * row + col));
       actor->GetTextProperty()->SetColor(0.75, .2 + col * .26, .2 + row * .26);
+      actor->GetTextProperty()->SetBackgroundColor(0.,
+                                                   1. - col * .26,
+                                                   1. - row * .26);
+      actor->GetTextProperty()->SetBackgroundOpacity(0.25);
       actor->SetPosition(x[col], y[row], 0.);
       setupTextActor3D(actor.GetPointer(), anchors.GetPointer());
       ren->AddActor(actor.GetPointer());
@@ -118,6 +122,27 @@ int TestTextActor3D(int, char *[])
   anchorActor->SetMapper(anchorMapper.GetPointer());
   anchorActor->GetProperty()->SetPointSize(5);
   ren->AddActor(anchorActor.GetPointer());
+
+  // Add some various 'empty' actors to make sure there are no surprises:
+  vtkNew<vtkTextActor3D> nullInputActor;
+  nullInputActor->SetInput(NULL);
+  ren->AddActor(nullInputActor.GetPointer());
+
+  vtkNew<vtkTextActor3D> emptyInputActor;
+  emptyInputActor->SetInput("");
+  ren->AddActor(emptyInputActor.GetPointer());
+
+  vtkNew<vtkTextActor3D> spaceActor;
+  spaceActor->SetInput(" ");
+  ren->AddActor(spaceActor.GetPointer());
+
+  vtkNew<vtkTextActor3D> tabActor;
+  tabActor->SetInput("\t");
+  ren->AddActor(tabActor.GetPointer());
+
+  vtkNew<vtkTextActor3D> newlineActor;
+  newlineActor->SetInput("\n");
+  ren->AddActor(newlineActor.GetPointer());
 
   vtkNew<vtkRenderWindow> win;
   win->AddRenderer(ren.GetPointer());

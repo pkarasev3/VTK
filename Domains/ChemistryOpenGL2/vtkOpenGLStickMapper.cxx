@@ -15,7 +15,10 @@
 
 #include "vtkglVBOHelper.h"
 
-#include "vtkCamera.h"
+#include "vtkMatrix3x3.h"
+#include "vtkMatrix4x4.h"
+#include "vtkOpenGLActor.h"
+#include "vtkOpenGLCamera.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
@@ -26,7 +29,7 @@
 
 #include "vtkStickMapperVS.h"
 
-using vtkgl::replace;
+using vtkgl::substitute;
 
 //-----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkOpenGLStickMapper)
@@ -57,7 +60,12 @@ void vtkOpenGLStickMapper::ReplaceShaderValues(std::string &VSSource,
                                                  vtkRenderer* ren,
                                                  vtkActor *actor)
 {
-  FSSource = replace(FSSource,
+  substitute(VSSource,
+    "//VTK::Camera::Dec",
+    "uniform mat4 VCDCMatrix;\n"
+    "uniform mat4 MCVCMatrix;");
+
+  substitute(FSSource,
     "//VTK::PositionVC::Dec",
     "varying vec4 vertexVCClose;");
 
@@ -68,27 +76,30 @@ void vtkOpenGLStickMapper::ReplaceShaderValues(std::string &VSSource,
     "varying float radiusVC;\n"
     "varying vec3 orientVC;\n"
     "varying float lengthVC;\n"
-    "varying vec3 centerVC;\n";
-
-  if (lightComplexity < 2)
-    {
-    replacement += "uniform mat4 VCDCMatrix;\n";
-    }
-  FSSource = replace(FSSource,"//VTK::Normal::Dec",replacement);
+    "varying vec3 centerVC;\n"
+    "uniform mat4 VCDCMatrix;\n";
+  substitute(FSSource,"//VTK::Normal::Dec",replacement);
 
 
   // see https://www.cl.cam.ac.uk/teaching/1999/AGraphHCI/SMAG/node2.html
-  FSSource = replace(FSSource,"//VTK::Normal::Impl",
+  substitute(FSSource,"//VTK::Normal::Impl",
     // compute the eye position and unit direction
     "  vec4 vertexVC = vertexVCClose;\n"
-    "  vec3 EyePos = vec3(0.0,0.0,0.0);\n"
-    "  if (cameraParallel != 0) { EyePos = vertexVC.xyz;}\n"
+    "  vec3 EyePos;\n"
+    "  vec3 EyeDir;\n"
+    "  if (cameraParallel != 0) {\n"
+    "    EyePos = vec3(vertexVC.x, vertexVC.y, vertexVC.z + 3.0*radiusVC);\n"
+    "    EyeDir = vec3(0.0,0.0,-1.0); }\n"
+    "  else {\n"
+    "    EyeDir = vertexVC.xyz;\n"
+    "    EyePos = vec3(0.0,0.0,0.0);\n"
+    "    float lengthED = length(EyeDir);\n"
+    "    EyeDir = normalize(EyeDir);\n"
     // we adjust the EyePos to be closer if it is too far away
     // to prevent floating point precision noise
-    "  vec3 EyeDir = vertexVC.xyz - EyePos;\n"
-    "  float lengthED = length(EyeDir);\n"
-    "  EyeDir = normalize(EyeDir);\n"
-    "  if (lengthED > (radiusVC+lengthVC)*3.0) { EyePos = vertexVC.xyz - EyeDir*3.0*(radiusVC+lengthVC);}\n"
+    "    if (lengthED > radiusVC*3.0) {\n"
+    "      EyePos = vertexVC.xyz - EyeDir*3.0*radiusVC; }\n"
+    "    }\n"
 
     // translate to Cylinder center
     "  EyePos = EyePos - centerVC;\n"
@@ -148,33 +159,33 @@ void vtkOpenGLStickMapper::ReplaceShaderValues(std::string &VSSource,
   bool picking = (ren->GetRenderWindow()->GetIsPicking() || selector != NULL);
   if (picking)
     {
-    VSSource = vtkgl::replace(VSSource,
+    substitute(VSSource,
       "//VTK::Picking::Dec",
       "attribute vec4 selectionId;\n"
       "varying vec4 selectionIdFrag;");
-    VSSource = vtkgl::replace(VSSource,
+    substitute(VSSource,
       "//VTK::Picking::Impl",
       "selectionIdFrag = selectionId;");
-    FSSource = vtkgl::replace(FSSource,
+    substitute(FSSource,
       "//VTK::Picking::Dec",
       "uniform vec3 mapperIndex;\n"
       "varying vec4 selectionIdFrag;");
-    FSSource = vtkgl::replace(FSSource,
+    substitute(FSSource,
       "//VTK::Picking::Impl",
       "if (mapperIndex == vec3(0.0,0.0,0.0))\n"
       "    {\n"
-      "    gl_FragColor = vec4(selectionIdFrag.rgb, 1.0);\n"
+      "    gl_FragData[0] = vec4(selectionIdFrag.rgb, 1.0);\n"
       "    }\n"
       "  else\n"
       "    {\n"
-      "    gl_FragColor = vec4(mapperIndex,1.0);\n"
+      "    gl_FragData[0] = vec4(mapperIndex,1.0);\n"
       "    }"
       );
     }
 
   if (ren->GetLastRenderingUsedDepthPeeling())
     {
-    FSSource = vtkgl::replace(FSSource,
+    substitute(FSSource,
       "//VTK::DepthPeeling::Impl",
       "float odepth = texture2D(opaqueZTexture, gl_FragCoord.xy/screenSize).r;\n"
       "  if (gl_FragDepth >= odepth) { discard; }\n"
@@ -201,11 +212,33 @@ vtkOpenGLStickMapper::~vtkOpenGLStickMapper()
 void vtkOpenGLStickMapper::SetCameraShaderParameters(vtkgl::CellBO &cellBO,
                                                     vtkRenderer* ren, vtkActor *actor)
 {
-  // do the superclass and then reset a couple values
-  this->Superclass::SetCameraShaderParameters(cellBO,ren,actor);
+  vtkShaderProgram *program = cellBO.Program;
 
-  // add in uniforms for parallel and distance
-  vtkCamera *cam = ren->GetActiveCamera();
+  vtkOpenGLCamera *cam = (vtkOpenGLCamera *)(ren->GetActiveCamera());
+
+  vtkMatrix4x4 *wcdc;
+  vtkMatrix4x4 *wcvc;
+  vtkMatrix3x3 *norms;
+  vtkMatrix4x4 *vcdc;
+  cam->GetKeyMatrices(ren,wcvc,norms,vcdc,wcdc);
+  program->SetUniformMatrix("VCDCMatrix", vcdc);
+
+  if (!actor->GetIsIdentity())
+    {
+    vtkMatrix4x4 *mcwc;
+    vtkMatrix3x3 *anorms;
+    ((vtkOpenGLActor *)actor)->GetKeyMatrices(mcwc,anorms);
+    vtkMatrix4x4::Multiply4x4(mcwc, wcvc, this->TempMatrix4);
+    program->SetUniformMatrix("MCVCMatrix", this->TempMatrix4);
+    vtkMatrix3x3::Multiply3x3(anorms, norms, this->TempMatrix3);
+    program->SetUniformMatrix("normalMatrix", this->TempMatrix3);
+    }
+  else
+    {
+    program->SetUniformMatrix("MCVCMatrix", wcvc);
+    program->SetUniformMatrix("normalMatrix", norms);
+    }
+
   cellBO.Program->SetUniformi("cameraParallel", cam->GetParallelProjection());
 }
 
@@ -213,7 +246,7 @@ void vtkOpenGLStickMapper::SetCameraShaderParameters(vtkgl::CellBO &cellBO,
 void vtkOpenGLStickMapper::SetMapperShaderParameters(vtkgl::CellBO &cellBO,
                                                          vtkRenderer *ren, vtkActor *actor)
 {
-  if (cellBO.indexCount && (this->OpenGLUpdateTime > cellBO.attributeUpdateTime ||
+  if (cellBO.indexCount && (this->VBOBuildTime > cellBO.attributeUpdateTime ||
       cellBO.ShaderSourceTime > cellBO.attributeUpdateTime))
     {
     vtkHardwareSelector* selector = ren->GetSelector();
@@ -454,7 +487,25 @@ size_t vtkOpenGLStickMapperCreateTriangleIndexBuffer(
 }
 
 //-------------------------------------------------------------------------
-void vtkOpenGLStickMapper::UpdateVBO(vtkRenderer *ren, vtkActor *act)
+bool vtkOpenGLStickMapper::GetNeedToRebuildBufferObjects(vtkRenderer *ren, vtkActor *act)
+{
+  // picking state changing always requires a rebuild
+  vtkHardwareSelector* selector = ren->GetSelector();
+  bool picking = (ren->GetIsPicking() || selector != NULL);
+
+  if (this->VBOBuildTime < this->GetMTime() ||
+      this->VBOBuildTime < act->GetMTime() ||
+      this->VBOBuildTime < this->CurrentInput->GetMTime() ||
+      this->LastSelectionState || picking)
+    {
+    return true;
+    }
+  return false;
+}
+
+//-------------------------------------------------------------------------
+void vtkOpenGLStickMapper::BuildBufferObjects(vtkRenderer *ren,
+  vtkActor *vtkNotUsed(act))
 {
   vtkPolyData *poly = this->CurrentInput;
 
@@ -469,7 +520,7 @@ void vtkOpenGLStickMapper::UpdateVBO(vtkRenderer *ren, vtkActor *act)
   // I moved this out of the conditional because it is fast.
   // Color arrays are cached. If nothing has changed,
   // then the scalars do not have to be regenerted.
-  this->MapScalars(act->GetProperty()->GetOpacity());
+  this->MapScalars(1.0);
 
   vtkHardwareSelector* selector = ren->GetSelector();
   bool picking = (ren->GetRenderWindow()->GetIsPicking() || selector != NULL);

@@ -13,8 +13,8 @@
 
 =========================================================================*/
 
-#ifndef __vtkSMPTools2_h__
-#define __vtkSMPTools2_h__
+#ifndef vtkSMPTools2_h__
+#define vtkSMPTools2_h__
 
 #include "vtkCommonCoreModule.h" // For export macro
 #include "vtkObject.h"
@@ -50,8 +50,9 @@ class TaskTraverse : public tbb::task {
           : tree(t), functor(f),
             level(l), index(i),
             BranchingFactor(b)
-      {
-      }
+    {
+    }
+
     ~TaskTraverse()
     {
     }
@@ -106,7 +107,7 @@ template <typename Tree, typename FunctorInternal>
 static void vtkSMPTools2_Impl_Traverse(int level, vtkIdType bf, const Tree* t, FunctorInternal& fi)
 {
   TaskTraverse<Tree,FunctorInternal>* task = new(tbb::task::allocate_root())
-    TaskTraverse<Tree,FunctorInternal>(t, fi, 0, 0, bf);
+    TaskTraverse<Tree,FunctorInternal>(t, fi, level, 0, bf);
   tbb::task::spawn_root_and_wait(*task);
 }
 

@@ -339,7 +339,6 @@ vtkStdString * vtkStringArray::ResizeAndExtend(vtkIdType sz)
   if(newSize <= 0)
     {
     this->Initialize();
-    vtkErrorMacro(<< "Memory size must be positive\n");
     return 0;
     }
 
@@ -457,7 +456,10 @@ void vtkStringArray::InsertValue(vtkIdType id, vtkStdString f)
 {
   if ( id >= this->Size )
     {
-    this->ResizeAndExtend(id+1);
+    if (!this->ResizeAndExtend(id+1))
+      {
+      return;
+      }
     }
   this->Array[id] = f;
   if ( id > this->MaxId )
@@ -585,6 +587,46 @@ void vtkStringArray::InsertTuples(vtkIdList *dstIds, vtkIdList *srcIds,
     vtkIdType numComp = this->NumberOfComponents;
     vtkIdType srcLoc = srcIds->GetId(idIndex) * this->NumberOfComponents;
     vtkIdType dstLoc = dstIds->GetId(idIndex) * this->NumberOfComponents;
+    while (numComp-- > 0)
+      {
+      this->InsertValue(dstLoc++, sa->GetValue(srcLoc++));
+      }
+    }
+
+  this->DataChanged();
+}
+
+// ----------------------------------------------------------------------------
+void vtkStringArray::InsertTuples(vtkIdType dstStart, vtkIdType n,
+                                  vtkIdType srcStart, vtkAbstractArray *source)
+{
+  vtkStringArray* sa = vtkStringArray::SafeDownCast(source);
+  if (!sa)
+    {
+    vtkWarningMacro("Input and outputs array data types do not match.");
+    return ;
+    }
+
+  if (this->NumberOfComponents != source->GetNumberOfComponents())
+    {
+    vtkWarningMacro("Input and output component sizes do not match.");
+    return;
+    }
+
+  vtkIdType srcEnd = srcStart + n;
+  if (srcEnd > source->GetNumberOfTuples())
+    {
+    vtkWarningMacro("Source range exceeds array size (srcStart=" << srcStart
+                    << ", n=" << n << ", numTuples="
+                    << source->GetNumberOfTuples() << ").");
+    return;
+    }
+
+  for (vtkIdType i = 0; i < n; ++i)
+    {
+    vtkIdType numComp = this->NumberOfComponents;
+    vtkIdType srcLoc = (srcStart + i) * this->NumberOfComponents;
+    vtkIdType dstLoc = (dstStart + i) * this->NumberOfComponents;
     while (numComp-- > 0)
       {
       this->InsertValue(dstLoc++, sa->GetValue(srcLoc++));

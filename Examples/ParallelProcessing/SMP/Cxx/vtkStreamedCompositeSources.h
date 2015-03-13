@@ -1,10 +1,10 @@
-#ifndef __vtkStreamedCompositeSources_h
-#define __vtkStreamedCompositeSources_h
+#ifndef vtkStreamedCompositeSources_h
+#define vtkStreamedCompositeSources_h
 
 #include "vtkCommonExecutionModelModule.h" // For export macro
 #include "vtkStreamedCompositeDataPipeline.h"
 
-class VTKCOMMONEXECUTIONMODEL_EXPORT vtkStreamedCompositeSources :
+class VTK_EXPORT vtkStreamedCompositeSources :
   public vtkStreamedCompositeDataPipeline
 {
   vtkStreamedCompositeSources(const vtkStreamedCompositeSources&);

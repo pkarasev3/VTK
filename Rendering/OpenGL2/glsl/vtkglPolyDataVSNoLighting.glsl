@@ -24,12 +24,14 @@
 // DC - Display Coordinates
 attribute vec4 vertexMC;
 
+// frag position in VC
+//VTK::PositionVC::Dec
+
 // material property values
 //VTK::Color::Dec
 
 // camera and actor matrix values
-uniform mat4 MCVCMatrix;  // combined Model to View transform
-uniform mat4 VCDCMatrix;  // the camera's projection matrix
+//VTK::Camera::Dec
 
 // Texture coordinates
 //VTK::TCoord::Dec
@@ -45,5 +47,5 @@ void main()
 
   //VTK::Clip::Impl
 
-  gl_Position = VCDCMatrix * MCVCMatrix * vertexMC;
+  //VTK::PositionVC::Impl
 }
