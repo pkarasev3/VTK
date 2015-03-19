@@ -1,7 +1,8 @@
 /*=========================================================================
-
+ *
 =========================================================================*/
-// .NAME vtkOBJPolydataProcessor - read Wavefront .obj files
+// .NAME vtkOBJImporter - import polydata + textures + actors
+//                        from Wavefront .obj/.mtl files
 // .SECTION Description
 
 
@@ -17,6 +18,7 @@ class vtkRenderer;
 class vtkPolydata;
 class vtkOBJPolydataProcessor;
 
+//! @note{updated by peter karasev, 2015 to read texture coordinates + material properties}
 class VTKIOIMPORT_EXPORT vtkOBJImporter : public vtkImporter
 {
 public:

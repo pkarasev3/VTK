@@ -6,8 +6,8 @@
 #include <map>
 #include "vtkActor.h"
 
-#define OBJ_FILENAME_LENGTH 500
-#define MATERIAL_NAME_SIZE 255
+const int OBJ_FILENAME_LENGTH = 500;
+const int MATERIAL_NAME_SIZE  = 255;
 
 struct obj_material
 {

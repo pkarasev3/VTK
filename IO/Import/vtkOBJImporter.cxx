@@ -158,14 +158,14 @@ vtkOBJPolydataProcessor::~vtkOBJPolydataProcessor()
 }
 
 obj_material*  vtkOBJPolydataProcessor::GetMaterial(int k)
-{ // unsafe !
+{
     ImportedPolydataWithMaterial*  rpdmm = this->poly_list[k];
     return rpdmm->mtlProperties;
 }
 
 
 std::string vtkOBJPolydataProcessor::GetTextureFilename( int idx )
-{  // unsafe!
+{
     return outVector_of_textureFilnames[idx];
 }
 
@@ -260,8 +260,11 @@ int vtkOBJPolydataProcessor::RequestData(
     int mtlParseResult;
     std::vector<obj_material*>  parsedMTLs = obj_parse_mtl_file(MTLfilename,mtlParseResult);
     int numMaterialsInMTLfile = parsedMTLs.size();
-    cout << "vtkOBJPolydataProcessor parsed " << numMaterialsInMTLfile
-         << " materials from "   << MTLfilename << endl;
+    if(this->GetDebug())
+    {
+        cout << "vtkOBJPolydataProcessor parsed "   << numMaterialsInMTLfile
+             << " materials from "   << MTLfilename << endl;
+    }
 
     vtkPoints* points  = poly_list.back()->points;
     vtkFloatArray* tcoords = poly_list.back()->tcoords;
@@ -282,9 +285,10 @@ int vtkOBJPolydataProcessor::RequestData(
     for( int i=0;i<(int)parsedMTLs.size();i++ ) {
         string mtlname     = parsedMTLs[i]->name;
         string texfilename = parsedMTLs[i]->texture_filename;
-        outVector_of_textureFilnames[i] = std::string(parsedMTLs[i]->texture_filename);
+        outVector_of_textureFilnames[i] = texfilename;
         mtlName_to_mtlData[mtlname] = parsedMTLs[i];
-        cout << "out texture name: " << outVector_of_textureFilnames[i] << endl;
+        if(this->GetDebug())
+            cout << "out texture name: " << outVector_of_textureFilnames[i] << endl;
     }
 
     bool gotFirstUseMaterialTag = false; {
@@ -607,7 +611,8 @@ int vtkOBJPolydataProcessor::RequestData(
                 // also make a note of whether any cells have tcoords, and whether any have normals
                 numPolysWithTCoords += (int) (nTCoords)>0;
                 if ( (!hasTCoords)&&(nTCoords > 0) ) {
-                    printf("got texture coords in obj file! nTCoords = %08d\n",nTCoords);
+                    if(this->GetDebug())
+                        printf("got texture coords in obj file! nTCoords = %08d\n",nTCoords);
                     hasTCoords = true;
                 } else if (nTCoords==0) {
                     printf("did NOT get texture coords in obj file!\n");
@@ -616,12 +621,14 @@ int vtkOBJPolydataProcessor::RequestData(
             }
             else if (strcmp(cmd, "usemtl") == 0) {
                 std::string strLine(pLine);
-                printf("strLine = %s",strLine.c_str());
+                if(this->GetDebug())
+                    printf("strLine = %s",strLine.c_str());
                 int idx = strLine.find_first_of(' ');
                 int idxNewLine = strLine.find_last_of('\n');
                 std::string a = strLine.substr(0,idx);
                 std::string mtl_name = strLine.substr(idx+1,idxNewLine);
-                printf("'Use Material' command, usemtl with name:    %s\n",mtl_name.c_str());
+                if(this->GetDebug())
+                    printf("'Use Material' command, usemtl with name:    %s\n",mtl_name.c_str());
 
                 gotFirstUseMaterialTag = true; // yep we have a usemtl command. check to make sure idiots don't try to add vertices later.
                 int mtlCount = known_materials.count(mtl_name);
@@ -631,7 +638,8 @@ int vtkOBJPolydataProcessor::RequestData(
                         poly_list.back()->materialName = mtl_name;
                         poly_list.back()->mtlProperties= mtlName_to_mtlData[mtl_name];
                         known_materials[mtl_name]      = poly_list.back();
-                        cout << "name of *FIRST* material is: " << poly_list.back()->materialName << endl;
+                        if(this->GetDebug())
+                            cout << "name of FIRST material is: " << poly_list.back()->materialName << endl;
                     }
                     else
                     { // new material encountered; bag and tag it, make a new named-poly-data-container
@@ -643,7 +651,9 @@ int vtkOBJPolydataProcessor::RequestData(
                         novaya->tcoords->DeepCopy(poly_list.back()->tcoords);
                         poly_list.push_back(novaya);
                         known_materials[mtl_name] = poly_list.back();
-                        cout << "новые данные, name of material is: " << poly_list.back()->materialName << endl;
+
+                        if(this->GetDebug())
+                            cout << "новые данные, name of material is: " << poly_list.back()->materialName << endl;
 
                         /** slightly tricky: all multi-polys share the vertex, normals, and tcoords,
                                  but define unique polygons... */
@@ -657,8 +667,9 @@ int vtkOBJPolydataProcessor::RequestData(
                 else /** This material name already exists; switch back to it! */
                 {
                     ImportedPolydataWithMaterial* known_mtl = known_materials[mtl_name];
-                    cout << "switching to append faces with pre-existing material named "
-                         << known_mtl->materialName << endl;
+                    if(this->GetDebug())
+                        cout << "switching to append faces with pre-existing material named "
+                             << known_mtl->materialName << endl;
                     polys           = known_mtl->polys; // Update pointers reading file further
                     tcoord_polys    = known_mtl->tcoord_polys;
                     pointElems      = known_mtl->pointElems;
@@ -703,9 +714,12 @@ int vtkOBJPolydataProcessor::RequestData(
             pointElems      = poly_list[outputIndex]->pointElems;
             lineElems       = poly_list[outputIndex]->lineElems;
             normal_polys    = poly_list[outputIndex]->normal_polys;
-            cout << "generating output polydata ....  " << output << endl;
-            printf("tcoords same as verts!? %d ... hasTCoords? %d ... numPolysWithTCoords = %08d\n",
-                   (int)tcoords_same_as_verts,(int)hasTCoords,numPolysWithTCoords);
+            if(this->GetDebug())
+            {
+                cout << "generating output polydata ....  " << output << endl;
+                printf("tcoords same as verts!? %d ... hasTCoords? %d ... numPolysWithTCoords = %08d\n",
+                       (int)tcoords_same_as_verts,(int)hasTCoords,numPolysWithTCoords);
+            }
             // if there are no tcoords or normals or they match exactly
             // then we can just copy the data into the output (easy!)
             if (
@@ -713,7 +727,6 @@ int vtkOBJPolydataProcessor::RequestData(
                 (!hasNormals || normals_same_as_verts)
                 )
             { // ...
-                cout << "Nice, the tcoords align with vertices, easy case! " << endl;
                 vtkDebugMacro(<<"Copying file data into the output directly");
 
                 output->SetPoints(points);
@@ -747,7 +760,8 @@ int vtkOBJPolydataProcessor::RequestData(
             else
             {
                 vtkDebugMacro(<<"Duplicating vertices so that tcoords and normals are correct");
-                cout << "Duplicating vertices so that tcoords and normals are correct" << endl;
+                if(this->GetDebug())
+                    cout << "Duplicating vertices so that tcoords and normals are correct" << endl;
                 vtkPoints *new_points = vtkPoints::New();
                 vtkFloatArray *new_tcoords = vtkFloatArray::New();
                 new_tcoords->SetNumberOfComponents(2);
@@ -810,16 +824,26 @@ int vtkOBJPolydataProcessor::RequestData(
                 }
 
                 // use the new structures for the output
-                output->SetPoints(new_points); cout << " set new points, count = "
-                                                    << new_points->GetNumberOfPoints() << " ... \n";
-                output->SetPolys(new_polys);   cout << " set new polys, count = "
-                                                    << new_polys->GetNumberOfCells() << " ... \n";
+                output->SetPoints(new_points);
+                output->SetPolys(new_polys);
+                if(this->GetDebug())
+                {
+                    cout << " set new points, count = "
+                         << new_points->GetNumberOfPoints() << " ... \n";
+                    cout << " set new polys, count = "
+                         << new_polys->GetNumberOfCells() << " ... \n";
+                }
                 if (hasTCoords) {
-                    output->GetPointData()->SetTCoords(new_tcoords); cout << " set new tcoords ... \n";
+                    output->GetPointData()->SetTCoords(new_tcoords);
+                    if(this->GetDebug())
+                        cout << " set new tcoords ... \n";
                 }
                 if (hasNormals) {
-                    output->GetPointData()->SetNormals(new_normals); cout << " set new normals ... \n";
+                    output->GetPointData()->SetNormals(new_normals);
+                    if(this->GetDebug())
+                        cout << " set new normals ... \n";
                 }
+
                 // TODO: fixup for pointElems and lineElems too
                 output->Squeeze();
 
@@ -846,32 +870,11 @@ void vtkOBJPolydataProcessor::PrintSelf(ostream& os, vtkIndent indent)
 
 
 
-#if 0
-{   /** testing: reset to first in the list ... */
-int idx = std::min(4.0, poly_list.size()-1.0);
-polys           = poly_list[idx]->polys; // Update pointers reading file further
-tcoord_polys    = poly_list[idx]->tcoord_polys;
-pointElems      = poly_list[idx]->pointElems;
-lineElems       = poly_list[idx]->lineElems;
-normal_polys    = poly_list[idx]->normal_polys;
-cout << "pushing named material:   " << poly_list[idx]->materialName
-     << " into genuine vtkPolyData" << endl;
-}
-/** this is too confusing for dynamic-sized number of outputs ...
-                   circumvent the pipeline ;-/         */
-// get the info object
-// vtkInformation *outInfo = outputVector->GetInformationObject(0);
-// get the output
-// = vtkPolyData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()),outPortIndex);
-#endif
-
-
-
-
 // ************************************************************************* //
 
 
-vtkPolyData*vtkOBJPolydataProcessor::GetOutput(int idx) {
+vtkPolyData* vtkOBJPolydataProcessor::GetOutput(int idx)
+{
     if( idx < (int)outVector_of_vtkPolyData.size() )
         return outVector_of_vtkPolyData[idx];
     else

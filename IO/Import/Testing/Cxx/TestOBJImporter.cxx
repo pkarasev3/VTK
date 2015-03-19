@@ -67,10 +67,21 @@ std::string  createTestPNG()
     return outputFilename;
 }
 
-bool bInteractive() { return true; }
+namespace
+{
+int s_interactive = 0;
+
+bool bInteractive()
+{
+    return (s_interactive>0);
+}
+
+}
 
 int TestOBJImporter( int argc, char * argv [] )
 {
+    // Files for testing demonstrate updated functionality for OBJ import:
+    //       polydata + textures + actor properties all get loaded.
 
     std::string filenameOBJ;
     std::string filenameMTL;
@@ -79,12 +90,10 @@ int TestOBJImporter( int argc, char * argv [] )
     {
         filenameOBJ = "MiG-35.obj";
         filenameMTL = "MiG-35.obj.mtl";
-        std::cerr<<"got zero args; using default test files: "
-                <<filenameOBJ<<","<<filenameMTL;
     }
     else
     {
-        if( argc != 3 )
+        if( argc < 3 )
         {
             std::cerr << "invalid args; expected: "<< argv[0]
                       << " File.obj "<<" File.obj.mtl " << std::endl;
@@ -95,6 +104,8 @@ int TestOBJImporter( int argc, char * argv [] )
             // Ok, set the filenames from which to load geometry + material info.
             filenameOBJ = std::string(argv[1]);
             filenameMTL = std::string(argv[2]);
+            if(argc > 3)
+                s_interactive = 1;
         }
     }
     std::string jpgfile = createTestJPG();

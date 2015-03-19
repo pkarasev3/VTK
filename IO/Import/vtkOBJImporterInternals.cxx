@@ -13,7 +13,7 @@
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 
-#define OBJ_LINE_SIZE 500   // TODO: get rid of this
+const int OBJ_LINE_SIZE = 500;
 
 #define SP(X) vtkSmartPointer< X >
 
@@ -84,8 +84,6 @@ std::vector<obj_material*> obj_parse_mtl_file(std::string Filename,int& result_c
     return listOfMaterials;
   }
 
-  //list_make(listOfMaterials, 10, 1);
-
   while( fgets(current_line, OBJ_LINE_SIZE, mtl_file_stream) )
   {
     current_token = strtok( current_line, " \t\n\r");
@@ -111,14 +109,10 @@ std::vector<obj_material*> obj_parse_mtl_file(std::string Filename,int& result_c
     //ambient
     else if( strequal(current_token, "Ka") && material_open)
     {
-      // THIS line is hit:
-      cout << "got amb token: " << current_token << ", line is: " << current_line << endl;
-
       // But this is ... right? no?
       current_mtl->amb[0] = atof( strtok(NULL, " \t"));
       current_mtl->amb[1] = atof( strtok(NULL, " \t"));
       current_mtl->amb[2] = atof( strtok(NULL, " \t"));
-      cout<<"current_mtl->amb[0]: " << current_mtl->amb[0] << endl; // seems good here. doesn't get read in vtk right...
     }
 
     //diff
@@ -190,9 +184,12 @@ void  bindTexturedPolydataToRenderWindow( vtkRenderWindow* renderWindow,
                                           vtkRenderer* renderer,
                                           vtkOBJPolydataProcessor* reader )
 {
-    if( NULL == (renderWindow) ) { cout << "renderWindow is null, you fail" << endl; return; }
-    if( NULL == (renderer) ) { cout << "renderer is null, you fail" << endl; return; }
-    if( NULL == (reader) ) { cout << "vtkOBJPolydataProcessor is null, you fail" << endl; return; }
+    if( NULL == (renderWindow) ) {
+        cerr << "renderWindow is null, failure!" << endl; return; }
+    if( NULL == (renderer) ) {
+        cerr << "renderer is null, failure!" << endl; return; }
+    if( NULL == (reader) ) {
+        cerr << "vtkOBJPolydataProcessor is null, failure!" << endl; return; }
 
     reader->actor_list.clear();
     reader->actor_list.reserve( reader->GetNumberOfOutputPorts() );
@@ -200,11 +197,13 @@ void  bindTexturedPolydataToRenderWindow( vtkRenderWindow* renderWindow,
     for( int port_idx=0; port_idx < reader->GetNumberOfOutputPorts(); port_idx++)
     {
         vtkPolyData* objPoly = reader->GetOutput(port_idx);
-        cout << "grabbed objPoly " << objPoly << ", port index " << port_idx << endl;
+
         vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
         mapper->SetInputData(objPoly);
 
+        if(reader->GetDebug())
         {
+            cout << "grabbed objPoly " << objPoly << ", port index " << port_idx << endl;
             int numPolys  = objPoly->GetNumberOfPolys();
             int numPoints = objPoly->GetNumberOfPoints();
             printf("numPolys = %08d, numPoints = %08d ...\n",numPolys,numPoints);
@@ -215,16 +214,12 @@ void  bindTexturedPolydataToRenderWindow( vtkRenderWindow* renderWindow,
 
         std::string textureFilename = reader->GetTextureFilename(port_idx);
 
-        std::string file_extension;//  = boost::filesystem::extension( textureFilename );
-        cout << "attempting load texture named " << textureFilename
-             << "    whose extensions seems to be " << file_extension << endl;
-
         SP(vtkJPEGReader) tex_jpg_Loader = SP(vtkJPEGReader)::New();
         SP(vtkPNGReader)  tex_png_Loader = SP(vtkPNGReader)::New();
         bool bIsReadableJPEG = tex_jpg_Loader->CanReadFile( textureFilename.c_str() );
         bool bIsReadablePNG  = tex_png_Loader->CanReadFile( textureFilename.c_str() );
 
-        // TODO: crap, what if there is no texture image? seems required now
+        // TODO: what if there is no texture image? seems required now?
         if( bIsReadableJPEG ) {
             tex_jpg_Loader->SetFileName( textureFilename.c_str() );
             tex_jpg_Loader->Update();
@@ -234,8 +229,7 @@ void  bindTexturedPolydataToRenderWindow( vtkRenderWindow* renderWindow,
             tex_png_Loader->Update();
             vtk_texture->AddInputConnection( tex_png_Loader->GetOutputPort() );
         } else {
-            cout << "Bad, unhandled or nonexistant texture image type! "
-                 << "Offender:   " << textureFilename << endl; exit(1);
+            cerr << "nonexistant texture image type!? imagefile: "<<textureFilename<<" .\n";
         }
         // vtk_texture->InterpolateOn();     // Better?? (cant see obvious benefit)
         vtk_texture->InterpolateOff(); // Faster?? (yes clearly faster for largish texture)
@@ -254,10 +248,11 @@ void  bindTexturedPolydataToRenderWindow( vtkRenderWindow* renderWindow,
         properties->SetSpecular( raw_mtl_data->get_spec_coeff() );
         properties->SetAmbient( raw_mtl_data->get_amb_coeff() );
         properties->SetDiffuse( raw_mtl_data->get_diff_coeff() );
-        cout << ".. done set up material definition, properties->Print says: " << endl;
-        properties->Print(std::cout);
+        //cout << ".. done set up material definition, properties->Print says: " << endl;
+        //properties->Print(std::cout);
         actor->SetProperty(properties);
         renderer->AddActor(actor);
+
         //properties->ShadingOn(); // use ShadingOn() if loading vtkMaterial from xml
         // available in mtl parser are:
         //    double amb[3];
