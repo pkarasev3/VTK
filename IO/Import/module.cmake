@@ -10,5 +10,6 @@ vtk_module(vtkIOImport
   TEST_DEPENDS
     vtkRendering${VTK_RENDERING_BACKEND}
     vtkTestingRendering
+    vtkImagingSources
     vtkInteractionStyle
   )

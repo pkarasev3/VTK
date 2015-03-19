@@ -36,15 +36,6 @@ char contains(const char *haystack, const char *needle)
 
 }
 
-//string   getImageFilename( std::shared_ptr ) {
-//  if( 0 == mtlName_to_imgFile.count(key) ) {
-//    cout << "Warning, requested string key " << key << " was not found." << endl;
-//    return string("");
-//  }  else {
-//    return mtlName_to_imgFile[key];
-//  }
-//}
-
 void obj_set_material_defaults(obj_material* mtl)
 {
   mtl->amb[0] = 0.2;
@@ -198,7 +189,7 @@ std::vector<obj_material*> obj_parse_mtl_file(std::string Filename,int& result_c
 void  bindTexturedPolydataToRenderWindow( vtkRenderWindow* renderWindow,
                                           vtkRenderer* renderer,
                                           vtkOBJPolydataProcessor* reader )
-{ // TODO: move this function to library, call from simulator client!
+{
     if( NULL == (renderWindow) ) { cout << "renderWindow is null, you fail" << endl; return; }
     if( NULL == (renderer) ) { cout << "renderer is null, you fail" << endl; return; }
     if( NULL == (reader) ) { cout << "vtkOBJPolydataProcessor is null, you fail" << endl; return; }
@@ -213,7 +204,7 @@ void  bindTexturedPolydataToRenderWindow( vtkRenderWindow* renderWindow,
         vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
         mapper->SetInputData(objPoly);
 
-        { /** debuggish */
+        {
             int numPolys  = objPoly->GetNumberOfPolys();
             int numPoints = objPoly->GetNumberOfPoints();
             printf("numPolys = %08d, numPoints = %08d ...\n",numPolys,numPoints);

@@ -151,7 +151,10 @@ vtkOBJPolydataProcessor::vtkOBJPolydataProcessor()
 
 vtkOBJPolydataProcessor::~vtkOBJPolydataProcessor()
 {
-
+    for( size_t k=0; k < poly_list.size(); k++) {
+        delete poly_list[k];
+        poly_list[k] = NULL;
+    }
 }
 
 obj_material*  vtkOBJPolydataProcessor::GetMaterial(int k)
