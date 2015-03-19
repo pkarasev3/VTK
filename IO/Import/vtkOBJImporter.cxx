@@ -76,15 +76,20 @@ int vtkOBJImporter::ImportBegin()
     {
         this->Impl->SetFileName(FileName);
         this->Impl->SetMTLfileName(FileNameMTL);
-        this->ImportActors(this->Renderer);
+        return 1;
     }
-
-    return 1;
+    return 0;
 }
 
 void vtkOBJImporter::ImportEnd()
 {
-    std::cout << " done with "<<__FUNCTION__<<std::endl;
+    std::cout << " done with "<<this->GetClassName()<<"::"<<__FUNCTION__<<std::endl;
+}
+
+void vtkOBJImporter::ReadData()
+{
+    this->Impl->Update();
+    bindTexturedPolydataToRenderWindow(this->RenderWindow,this->Renderer,Impl.Get());
 }
 
 void vtkOBJImporter::PrintSelf(std::ostream &os, vtkIndent indent)
@@ -92,25 +97,12 @@ void vtkOBJImporter::PrintSelf(std::ostream &os, vtkIndent indent)
     vtkImporter::PrintSelf(os,indent);
 }
 
-
-void vtkOBJImporter::ImportActors(vtkRenderer* renderer)
-{
-    this->Impl->Update();
-    bindTexturedPolydataToRenderWindow(this->RenderWindow,renderer,Impl.Get());
-}
-
-void vtkOBJImporter::ImportProperties(vtkRenderer* renderer)
-{
-    //    ImportActors(renderer);
-}
-
-
 ///////////////////////////////////////////
 
 
 struct ImportedPolydataWithMaterial
 {
-    ~ImportedPolydataWithMaterial() { }
+    ~ImportedPolydataWithMaterial() { delete mtlProperties; }
     ImportedPolydataWithMaterial()
     { // intialise some structures to store the file contents in
         points            = SP(vtkPoints)::New();
@@ -151,8 +143,7 @@ vtkOBJPolydataProcessor::vtkOBJPolydataProcessor()
     this->MTLfilename = "";
     this->VertexScale = 1.0;
     this->SetNumberOfInputPorts(0);
-    /** Switch to using multi-poly-data paradigm ...
-                      pivot based on named materials */
+    /** multi-poly-data paradigm: pivot based on named materials */
     ImportedPolydataWithMaterial* default_poly = (new ImportedPolydataWithMaterial);
     poly_list.push_back(default_poly);
     this->SetNumberOfOutputPorts(poly_list.size());

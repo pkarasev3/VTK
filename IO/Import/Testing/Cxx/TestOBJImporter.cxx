@@ -1,40 +1,46 @@
-#include "vtkOBJImporter.h"
-#include "vtkNew.h"
+
+#include "vtkVRMLImporter.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
+#include "vtkOBJImporter.h"
+#include "vtkTestUtilities.h"
+#include "vtkNew.h"
 
-int main(int argc,char* argv[])
+int TestOBJImporter( int argc, char * argv [] )
 {
-    vtkNew<vtkOBJImporter> importer;
+
     std::string filenameOBJ;
     std::string filenameMTL;
-    if( argc != 3 )
+    vtkNew<vtkOBJImporter> importer;
+    if(argc==0)
     {
-        std::cerr << "invalid args; expected: "<< argv[0]
-                  << " File.obj "<<" File.obj.mtl " << std::endl;
-        return 1;
+        filenameOBJ = "MiG-35.obj";
+        filenameMTL = "MiG-35.obj.mtl";
+        std::cerr<<"got zero args; using default test files: "
+                <<filenameOBJ<<","<<filenameMTL;
     }
     else
     {
-        // Ok, set the filenames to load geometry + material info.
-        filenameOBJ = std::string(argv[1]);
-        filenameMTL = std::string(argv[2]);
-        importer->SetFileName(filenameOBJ.data());
-        importer->SetFileNameMTL(filenameMTL.data());
+        if( argc != 3 )
+        {
+            std::cerr << "invalid args; expected: "<< argv[0]
+                      << " File.obj "<<" File.obj.mtl " << std::endl;
+            return 1;
+        }
+        else
+        {
+            // Ok, set the filenames to load geometry + material info.
+            filenameOBJ = std::string(argv[1]);
+            filenameMTL = std::string(argv[2]);
+        }
     }
+    importer->SetFileName(filenameOBJ.data());
+    importer->SetFileNameMTL(filenameMTL.data());
 
-    // Now create the RenderWindow, Renderer and Interactor
-    vtkNew<vtkRenderer> ren1;
-    vtkNew<vtkRenderWindow> renWin;
-    renWin->AddRenderer(ren1.GetPointer());
-    vtkNew<vtkRenderWindowInteractor> iren;
+    importer->Update();
 
-    iren->SetRenderWindow(renWin.GetPointer());
-
-    importer->SetRenderWindow(renWin.GetPointer());
-
-    iren->Start();
+    //iren->Start();
 
     return 0;
 }

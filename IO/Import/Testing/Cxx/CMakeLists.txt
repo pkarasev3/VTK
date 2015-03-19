@@ -1,11 +1,7 @@
+
 vtk_add_test_cxx(${vtk-module}CxxTests tests
+  TestOBJImporter.cxx,NO_VALID,NO_DATA,NO_OUTPUT
   TestVRMLNormals.cxx
   TestVRMLImporter.cxx,NO_VALID
   )
-vtk_test_cxx_executable(${vtk-module}CxxTests tests)
-
-add_executable(TestOBJImporter  TestOBJImporter.cxx)
-target_link_libraries( TestOBJImporter
- ${vtk-module}
- vtkRendering${VTK_RENDERING_BACKEND}
- vtkInteractionStyle )
+vtk_test_cxx_executable(${vtk-module}Cxx

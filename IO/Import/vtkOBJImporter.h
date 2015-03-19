@@ -36,10 +36,9 @@ protected:
   vtkOBJImporter();
   ~vtkOBJImporter();
 
-  virtual int  ImportBegin ();
-  virtual void ImportEnd ();
-  virtual void ImportActors (vtkRenderer *renderer);
-  virtual void ImportProperties (vtkRenderer *renderer);
+  virtual int  ImportBegin() /*override*/;
+  virtual void ImportEnd () /*override*/;
+  virtual void ReadData() /* override */;
 
   vtkSmartPointer<vtkOBJPolydataProcessor>   Impl;
   char* FileName;
@@ -50,10 +49,6 @@ private:
   void operator=(const vtkOBJImporter&);  // Not implemented.
 };
 
-
-//void  bindTexturedPolydataToRenderWindow( vtkRenderWindow* renderWindow,
-//                                          vtkRenderer* renderer,
-//                                          vtkOBJPolydataProcessor* reader );
 
 
 #endif
